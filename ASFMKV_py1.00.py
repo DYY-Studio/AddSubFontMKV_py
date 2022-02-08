@@ -238,6 +238,40 @@ def assAnalyze(asspath: str, fontlist: dict = {}, onlycheck: bool = False):
 def getFileList(customPath: list = [], font_name: dict = {}, noreg: bool = False):
     filelist = []
 
+    if not noreg:
+        # 从注册表读取
+        fontkey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts')
+        fontkey_num = winreg.QueryInfoKey(fontkey)[1]
+        #fkey = ''
+        try:
+            fontkey10 = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts')
+            fontkey10_num = winreg.QueryInfoKey(fontkey10)[1]
+            if fontkey10_num > 0:
+                for i in range(fontkey10_num):
+                    p = winreg.EnumValue(fontkey10, i)[1]
+                    #n = winreg.EnumValue(fontkey10, i)[0]
+                    if path.exists(p): 
+                        # test = n.split('&')
+                        # if len(test) > 1:
+                        #     for i in range(0, len(test)):
+                        #         font_name[re.sub(r'\(.*?\)', '', test[i].strip(' '))] = [p, i]
+                        # else: font_name[re.sub(r'\(.*?\)', '', n.strip(' '))] = [p, 0]
+                        filelist.append([p, ''])
+                        # test = path.splitext(path.basename(p))[0].split('&')
+        except:
+            pass
+        for i in range(fontkey_num):
+            k = winreg.EnumValue(fontkey, i)[1]
+            #n = winreg.EnumValue(fontkey, i)[0]
+            pk = path.join(r'C:\Windows\Fonts', k)
+            if path.exists(pk): 
+                # test = n.split('&')
+                # if len(test) > 1:
+                #     for i in range(0, len(test)):
+                #         font_name[re.sub(r'\(.*?\)', '', test[i].strip(' '))] = [pk, i]
+                # else: font_name[re.sub(r'\(.*?\)', '', n.strip(' '))] = [pk, 0]
+                filelist.append([pk, ''])
+
     # 从定义的文件夹读取
     # fontspath = [r'C:\Windows\Fonts', path.join(os.getenv('USERPROFILE'),r'AppData\Local\Microsoft\Windows\Fonts')]
     if customPath is None: customPath == []
@@ -249,42 +283,7 @@ def getFileList(customPath: list = [], font_name: dict = {}, noreg: bool = False
                 for p in f:
                     p = path.join(r, p) 
                     if path.splitext(p)[1][1:].lower() not in ['ttf', 'ttc', 'otc', 'otf']: continue
-                    filelist.append([path.join(s, p), '0'])
-
-    if noreg: return filelist, font_name
-
-    # 从注册表读取
-    fontkey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts')
-    fontkey_num = winreg.QueryInfoKey(fontkey)[1]
-    #fkey = ''
-    try:
-        fontkey10 = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts')
-        fontkey10_num = winreg.QueryInfoKey(fontkey10)[1]
-        if fontkey10_num > 0:
-            for i in range(fontkey10_num):
-                p = winreg.EnumValue(fontkey10, i)[1]
-                #n = winreg.EnumValue(fontkey10, i)[0]
-                if path.exists(p): 
-                    # test = n.split('&')
-                    # if len(test) > 1:
-                    #     for i in range(0, len(test)):
-                    #         font_name[re.sub(r'\(.*?\)', '', test[i].strip(' '))] = [p, i]
-                    # else: font_name[re.sub(r'\(.*?\)', '', n.strip(' '))] = [p, 0]
-                    filelist.append([p, ''])
-                    # test = path.splitext(path.basename(p))[0].split('&')
-    except:
-        pass
-    for i in range(fontkey_num):
-        k = winreg.EnumValue(fontkey, i)[1]
-        #n = winreg.EnumValue(fontkey, i)[0]
-        pk = path.join(r'C:\Windows\Fonts', k)
-        if path.exists(pk): 
-            # test = n.split('&')
-            # if len(test) > 1:
-            #     for i in range(0, len(test)):
-            #         font_name[re.sub(r'\(.*?\)', '', test[i].strip(' '))] = [pk, i]
-            # else: font_name[re.sub(r'\(.*?\)', '', n.strip(' '))] = [pk, 0]
-            filelist.append([pk, ''])
+                    filelist.append([path.join(s, p), 'xxx'])
 
     #print(font_name)
     #os.system('pause')
