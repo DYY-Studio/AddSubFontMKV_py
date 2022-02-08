@@ -6,8 +6,6 @@
 # *************************************************************************
 
 # 调用库，请不要修改
-import imp
-from itertools import count
 import shutil
 from fontTools import ttLib
 from fontTools import subset
