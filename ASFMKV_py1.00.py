@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # *************************************************************************
 #
 # 请使用支持 UTF-8 NoBOM 并最好带有 Python 语法高亮的文本编辑器
@@ -894,15 +895,17 @@ if os.system('mkvmerge -V 1>nul 2>nul') > 0:
     no_mkvm = True
 else: 
     print('\n\033[1;33m正在获取 mkvmerge 语言编码列表和支持格式列表...\033[0m')
-    mkvmv = '\n' + os.popen('mkvmerge -V', mode='r').read().replace('\n', '')
+    mkvmv = '\n' + os.popen('mkvmerge -V --ui-language en', mode='r').read().replace('\n', '')
     extget = re.compile(r'\[.*\]')
-    for s in os.popen('mkvmerge --list-languages', mode='r').readlines()[2:]:
+    langmkv = os.popen('mkvmerge --list-languages', mode='r')
+    for s in langmkv.buffer.read().decode('utf-8').splitlines()[2:]:
         s = s.replace('\n', '').split('|')
-        if len(s[1].strip(' ')) > 0:
-            langlist.append(s[1].strip(' '))
-        if len(s[2].strip(' ')) > 0:
-            langlist.append(s[2].strip(' '))
-    for s in os.popen('mkvmerge -l', mode='r').readlines()[1:]:
+        for si in range(1, len(s)):
+            ss = s[si]
+            if len(ss.strip(' ')) > 0:
+                langlist.append(ss.strip(' '))
+    langmkv.close()
+    for s in os.popen('mkvmerge -l --ui-language en', mode='r').readlines()[1:]:
         for ss in re.search(r'\[.*\]', s).group().lstrip('[').rstrip(']').split(' '):
             extsupp.append(ss)
     extl_c = extlist
