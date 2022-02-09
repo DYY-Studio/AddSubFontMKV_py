@@ -25,9 +25,11 @@
 ## 系统要求
 **Windows 7 SP1 专业版及以上，python 3.7 及以上，cmd 必须支持 choice 命令**
 
-*（测试系统: Windows 10 21H1、20H1 及 Windows 7 SP1 最新补丁）*
-
-不支持Linux
+** 不支持 Linux **
+#### 测试环境
+* Windows10 21H1、2004 及 Windows7 SP1 (已打全部补丁)
+* Python 3.9.5 / 3.8.10
+* mkvmerge v48.0.0
 # 功能介绍
 启动时需要先扫描注册表里的字体和用户给的自定义字体目录（如果有）
 ## ASFMKV-ListAssFont
