@@ -120,16 +120,18 @@ init()
 #   font_pos: 字体在样式中的位置
 def assAnalyze(asspath: str, fontlist: dict = {}, onlycheck: bool = False):
     global style_read
+    # 初始化变量
     eventline = 0
     style_pos = 0
     style_pos2 = 0
     text_pos = 0
     font_pos = 0
     styleline = 0
+    # 编译分析用正则表达式
     event_read = re.compile('.*\nDialogue:.*')
     style = re.compile(r'^\[V4.*Styles\]$')
     event = re.compile(r'^\[Events\]$')
-    #识别文本编码并读取整个SubtitleStationAlpha文件到内存
+    # 识别文本编码并读取整个SubtitleStationAlpha文件到内存
     ass = open(asspath, mode='rb')
     ass_b = ass.read()
     ass_code = chardet.detect(ass_b)['encoding'].lower()
@@ -139,7 +141,7 @@ def assAnalyze(asspath: str, fontlist: dict = {}, onlycheck: bool = False):
     fullass = ass.readlines()
     ass.close()
 
-    #在文件中搜索Styles标签和Events标签来确认起始行
+    # 在文件中搜索Styles标签和Events标签来确认起始行
     for s in range(0, len(fullass)):
         if re.match(style, fullass[s]) is not None:
             styleline = s
@@ -148,9 +150,9 @@ def assAnalyze(asspath: str, fontlist: dict = {}, onlycheck: bool = False):
         if styleline != 0 and eventline != 0:
             break
 
-    #获取Style的 Format 行，并用半角逗号分割
+    # 获取Style的 Format 行，并用半角逗号分割
     style_format = ''.join(fullass[styleline + 1].split(':')[1:]).strip(' ').split(',')
-    #确定Style中 Name 和 Fontname 的位置
+    # 确定Style中 Name 和 Fontname 的位置
     for i in range(0, len(style_format)):
         if style_format[i].lower().strip(' ').replace('\n', '') == 'name':
             style_pos = i
@@ -159,13 +161,12 @@ def assAnalyze(asspath: str, fontlist: dict = {}, onlycheck: bool = False):
         if style_pos != 0 and font_pos != 0:
             break
 
-    #获取 字体表 与 样式字体对应表
+    # 获取 字体表 与 样式字体对应表
     style_font = {}
-    #style_font 词典内容:
-    # { style : font }
-    #fontlist 词典内容:
-    # { font : text }
-    # Text: 使用该字体的文本
+    # style_font 词典内容:
+    #   { 样式 : 字体名 }
+    # fontlist 词典内容:
+    #   { 字体名 : 使用该字体的文本 }
     for i in range(styleline + 2, len(fullass)):
         if len(fullass[i].split(':')) < 2: 
             if re.search(style_read, '\n'.join(fullass[i + 1:])) is None: 
@@ -177,15 +178,16 @@ def assAnalyze(asspath: str, fontlist: dict = {}, onlycheck: bool = False):
         fontlist.setdefault(font_key, '')
         style_font[styleStr[style_pos]] = styleStr[font_pos]
 
+    # 如果 onlycheck 为 True，则不进行下一步的文本提取工作，只返回字体列表
     if onlycheck:
         fullass = []
         style_font.clear()
         return None, fontlist, None, None
     #print(fontlist)
 
-    #提取Event的 Format 行，并用半角逗号分割
+    # 提取Event的 Format 行，并用半角逗号分割
     event_format = ''.join(fullass[eventline + 1].split(':')[1:]).strip(' ').split(',')
-    #确定Event中 Style 和 Text 的位置
+    # 确定Event中 Style 和 Text 的位置
     for i in range(0, len(event_format)):
         if event_format[i].lower().replace('\n', '').strip(' ') == 'style':
             style_pos2 = i
@@ -194,9 +196,9 @@ def assAnalyze(asspath: str, fontlist: dict = {}, onlycheck: bool = False):
         if style_pos2 != 0 and text_pos != 0:
             break
 
-    #获取 字体的字符集
-    #先获取 Style，用style_font词典查找对应的 Font
-    #再将字符串追加到 fontlist 中对应 Font 的值中
+    # 获取 字体的字符集
+    # 先获取 Style，用style_font词典查找对应的 Font
+    # 再将字符串追加到 fontlist 中对应 Font 的值中
     for i in range(eventline + 2, len(fullass)):
         eventline_sp = fullass[i].split(':')
         if len(eventline_sp) < 2: 
@@ -209,20 +211,24 @@ def assAnalyze(asspath: str, fontlist: dict = {}, onlycheck: bool = False):
         eventline_sp = ''.join(eventline_sp[1:]).split(',')
         eventfont = style_font.get(eventline_sp[style_pos2].lstrip('*'))
         if not eventfont is None and not fontlist.get(eventfont) is None:
+            # 去除行中非文本部分，包括特效标签{}，硬软换行符，矢量文本行
             eventtext = re.sub(r'(\{.*?\})|(\\[hnN])|(m .*\w*.*)|(\s)', '', ','.join(eventline_sp[text_pos:]))
             #print(eventfont, eventtext)
             #print(eventtext, ','.join(eventline_sp[text_pos:]))
-            for i in range(0,len(eventtext)):
-                if not eventtext[i] in fontlist[eventfont]:
-                    fontlist[eventfont] = fontlist[eventfont] + eventtext[i]
+            if len(eventtext) > 0:
+                for i in range(0,len(eventtext)):
+                    if not eventtext[i] in fontlist[eventfont]:
+                        fontlist[eventfont] = fontlist[eventfont] + eventtext[i]
 
     print('\033[1m字幕所需字体\033[0m')
     fl_popkey = []
+    # 在字体列表中检查是否有没有在文本中使用的字体，如果有，添加到删去列表
     for s in fontlist.keys():
         if len(fontlist[s]) == 0:
             fl_popkey.append(s)
             #print('跳过没有字符的字体\"{0}\"'.format(s))
         else: print('\033[1m\"{0}\"\033[0m: 字符数[\033[1;33m{1}\033[0m]'.format(s, len(fontlist[s])))
+    # 删去 删去列表 中的字体
     if len(fl_popkey) > 0:
         for s in fl_popkey:
             fontlist.pop(s)
@@ -245,6 +251,7 @@ def getFileList(customPath: list = [], font_name: dict = {}, noreg: bool = False
         fontkey_num = winreg.QueryInfoKey(fontkey)[1]
         #fkey = ''
         try:
+            # 从用户字体注册表读取
             fontkey10 = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts')
             fontkey10_num = winreg.QueryInfoKey(fontkey10)[1]
             if fontkey10_num > 0:
@@ -262,6 +269,7 @@ def getFileList(customPath: list = [], font_name: dict = {}, noreg: bool = False
         except:
             pass
         for i in range(fontkey_num):
+            # 从 系统字体注册表 读取
             k = winreg.EnumValue(fontkey, i)[1]
             #n = winreg.EnumValue(fontkey, i)[0]
             pk = path.join(r'C:\Windows\Fonts', k)
@@ -301,9 +309,9 @@ def getFileList(customPath: list = [], font_name: dict = {}, noreg: bool = False
 #   dupfont: 重复字体的名称与其路径词典
 
 # font_name 词典结构
-# { 字体名称 : [ 字体绝对路径 , 字体索引 (仅用于TTC/OTC; 如果是TTF/OTF，默认为0) ] }
+#   { 字体名称 : [ 字体绝对路径 , 字体索引 (仅用于TTC/OTC; 如果是TTF/OTF，默认为0) ] }
 # dupfont 词典结构
-# { 重复字体名称 : [ 字体1绝对路径, 字体2绝对路径, ... ] }
+#   { 重复字体名称 : [ 字体1绝对路径, 字体2绝对路径, ... ] }
 def fontProgress(fl: list, f_n: dict = {}) -> dict:
     global dupfont
     #print(fl)
@@ -313,14 +321,19 @@ def fontProgress(fl: list, f_n: dict = {}) -> dict:
         s = fl[si][0]
         fromCustom = False
         if len(fl[si][1]) > 0: fromCustom = True
+        # 如果有来自自定义文件夹标记，则将 fromCustom 设为 True
         ext = path.splitext(s)[1][1:]
+        # 检查字体扩展名
         if ext.lower() not in ['ttf','ttc','otf','otc']: continue
+        # 输出进度
         print('\r' + '\033[1;32m{0}/{1} {2:.2f}% \033[0m'.format(si + 1, flL, ((si + 1)/flL)*100, ), end='', flush=True)
         if ext.lower() in ['ttf', 'otf']:
+            # 如果是 TTF/OTF 单字体文件，则使用 TTFont 读取
             try:
                 tc = [ttLib.TTFont(s, lazy=True)]
             except:
                 print('\033[1;31m\n[ERROR] \"{0}\": {1}\n\033[1;34m[TRY] 正在尝试使用TTC/OTC模式读取\033[0m'.format(s, sys.exc_info()))
+                # 如果 TTFont 读取失败，可能是使用了错误扩展名的 TTC/OTC 文件，换成 TTCollection 尝试读取
                 try:
                     tc = ttLib.TTCollection(s, lazy=True)
                     print('\033[1;34m[WARNING] 错误的字体扩展名\"{0}\" \033[0m'.format(s))
@@ -329,11 +342,13 @@ def fontProgress(fl: list, f_n: dict = {}) -> dict:
                     continue
         else:
             try:
+                # 如果是 TTC/OTC 字体集合文件，则使用 TTCollection 读取
                 tc =  ttLib.TTCollection(s, lazy=True)
             except:
                 print('\033[1;31m\n[ERROR] \"{0}\": {1}\n\033[1;34m[TRY] 正在尝试使用TTF/OTF模式读取\033[0m'.format(s, sys.exc_info()))
                 try:
-                    tc = ttLib.TTCollection(s, lazy=True)
+                    # 如果读取失败，可能是使用了错误扩展名的 TTF/OTF 文件，用 TTFont 尝试读取
+                    tc = [ttLib.TTFont(s, lazy=True)]
                     print('\033[1;34m[WARNING] 错误的字体扩展名\"{0}\" \033[0m'.format(s))
                 except:
                     print('\033[1;31m\n[ERROR] \"{0}\": {1}\033[0m'.format(s, sys.exc_info()))
@@ -341,15 +356,19 @@ def fontProgress(fl: list, f_n: dict = {}) -> dict:
             #f_n[path.splitext(path.basename(s))[0]] = [s, 0]
         for ti in range(0, len(tc)):
             t = tc[ti]
+            # 读取字体的 'name' 表
             for ii in range(0, len(t['name'].names)):
                 name = t['name'].names[ii]
+                # 若 nameID 为 4，读取 NameRecord 的文本信息
                 if name.nameID == 4:
                     namestr = ''
                     try:
                         namestr = name.toStr()
                     except:
+                        # 如果 fontTools 解码失败，则尝试使用 utf-16-be 直接解码
                         namestr = name.toBytes().decode('utf-16-be', errors='ignore')
                         try:
+                            # 尝试使用 去除 \x00 字符 解码
                             if len([i for i in name.toBytes() if i == 0]) > 0:
                                 nnames = t['name']
                                 namebyte = b''.join([bytes.fromhex('{:0>2}'.format(hex(i)[2:])) for i in name.toBytes() if i > 0])
@@ -359,17 +378,18 @@ def fontProgress(fl: list, f_n: dict = {}) -> dict:
                                 print('\n\033[1;33m已修正字体\"{0}\"名称读取 >> \"{1}\"\033[0m'.format(path.basename(s), namestr))
                                 #os.system('pause')
                             else: namestr = name.toBytes().decode('utf-16-be', errors='ignore')
+                            # 如果没有 \x00 字符，使用 utf-16-be 强行解码；如果有，尝试解码；如果解码失败，使用 utf-16-be 强行解码
                         except:
-                            #print('\n\033[1;34m{0}\033[0m'.format(name.toBytes().decode('utf-16-be', errors='ignore')))
                             print('\n\033[1;33m尝试修正字体\"{0}\"名称读取 >> \"{1}\"\033[0m'.format(path.basename(s), namestr))
                     if namestr is None: continue
                     namestr = namestr.strip(' ')
                     #print(namestr, path.basename(s))
                     if f_n.get(namestr) is not None:
+                        # 如果发现列表中已有相同名称的字体，检测它的文件名、扩展名、父目录是否相同
+                        # 如果有一者不同且不来自自定义文件夹，添加到重复字体列表
                         dupp = f_n[namestr][0]
                         if dupp != s and path.splitext(path.basename(dupp))[0] != path.splitext(path.basename(s))[0] and not fromCustom:
-                            print('\033[1;35m[WARNING] 字体\"{0}\"与字体\"{1}\"的名称\"{2}\"重复！\033[0m'.format(path.basename(f_n[namestr][0]), 
-                            path.basename(s), namestr))
+                            print('\033[1;35m[WARNING] 字体\"{0}\"与字体\"{1}\"的名称\"{2}\"重复！\033[0m'.format(path.basename(f_n[namestr][0]), path.basename(s), namestr))
                             if dupfont.get(namestr) is not None:
                                 if s not in dupfont[namestr]:
                                     dupfont[namestr].append(s)
@@ -400,17 +420,22 @@ def fontProgress(fl: list, f_n: dict = {}) -> dict:
 #   assfont: { 字体绝对路径?字体索引 : [ 字符串, ASS内的字体名称 ]}
 #   font_name: 同上，用于有新字体拖入时对该词典的更新
 def checkAssFont(fontlist: dict, font_name: dict, assfont: dict = {}, onlycheck: bool = False):
+    # 从fontlist获取字体名称
     for s in fontlist.keys():
         cok = False
+        # 在全局字体名称词典中寻找字体名称
         if s not in font_name:
+            # 如果找不到，将字体名称统一为小写再次查找
             font_name_cache = {}
             for ss in font_name.keys():
                 if ss.lower() == s or ss.upper() == s:
                     font_name_cache[ss.lower()] = font_name[ss]
                     cok = True
+            # update字体名称词典
             font_name.update(font_name_cache)
         else: cok = True
         if not cok:
+            # 如果 onlycheck 不为 True，向用户要求目标字体
             if not onlycheck:
                 print('\033[1;31m[ERROR] 缺少字体\"{0}\"\n请输入追加的字体文件或其所在字体目录的绝对路径\033[0m'.format(s))
                 addFont = {}
@@ -434,11 +459,14 @@ def checkAssFont(fontlist: dict, font_name: dict, assfont: dict = {}, onlycheck:
                         print('\033[1;31m[ERROR] 您没有输入任何字符！\033[0m')
                         inFont = ''
             else:
+                # 否则直接添加空
                 assfont['?'.join([s, s])] = ['', s]
         if cok:
+            # 如果找到，添加到assfont列表
             font_path = font_name[s][0]
             font_index = font_name[s][1]
             dict_key = '?'.join([font_path, str(font_index)])
+            # 如果 assfont 列表已有该字体，则将新字符添加到 assfont 中
             if assfont.get(dict_key) is None:
                 assfont[dict_key] = [fontlist[s], s]
             else:
@@ -469,6 +497,13 @@ def checkAssFont(fontlist: dict, font_name: dict, assfont: dict = {}, onlycheck:
 def getNameStr(name, subfontcrc: str) -> str:
     namestr = ''
     nameID = name.nameID
+    # 变更NameID为1, 3, 4, 6的NameRecord，它们分别对应
+    #   ID  Meaning
+    #   1   Font Family name
+    #   3   Unique font identifier
+    #   4   Full font name
+    #   6   PostScript name for the font
+    # 注意本脚本并不更改 NameID 为 0 和 7 的版权信息
     if nameID in [1,3,4,6]:
         namestr = subfontcrc
     else:
@@ -488,46 +523,53 @@ def assFontSubset(assfont: dict, fontdir: str) -> dict:
     newfont_name = {}
     # print(fontdir)
     print('正在子集化……')
+
+    if path.exists(path.dirname(fontdir)):
+        if not path.isdir(fontdir): 
+            try:
+                os.mkdir(fontdir)
+            except:
+                print('\033[1;31m[ERROR] 创建文件夹\"{0}\"失败\033[0m'.format(fontdir))
+                fontdir = os.getcwd()
+        if not path.isdir(fontdir): fontdir = path.dirname(fontdir)
+    else: fontdir = os.getcwd()
+    print('\033[1;33m字体输出路径: \"{0}\"\033[0m'.format(fontdir))
+
     for k in assfont.keys():
         # 偷懒没有变更该函数中的assfont解析到新的词典格式
         # 在这里会将assfont词典转换为旧的assfont列表形式
         # assfont: [ 字体绝对路径, 字体索引, 字符串, ASS内的字体名称 ]
         s = k.split('?') + [assfont[k][0], assfont[k][1]]
         subfontext = ''
-        fontname, fontext = path.splitext(path.basename(s[0]))
+        fontext = path.splitext(path.basename(s[0]))[1]
         if fontext[1:].lower() in ['otc', 'ttc']:
             subfontext = fontext[:3] + 'f'
         else: subfontext = fontext
         #print(fontdir, path.exists(path.dirname(fontdir)), path.exists(fontdir))
-        if path.exists(path.dirname(fontdir)):
-            if not path.isdir(fontdir): 
-                try:
-                    os.mkdir(fontdir)
-                except:
-                    print('\033[1;31m[ERROR] 创建文件夹\"{0}\"失败\033[0m'.format(fontdir))
-            if not path.isdir(fontdir): fontdir = path.dirname(fontdir)
-        else: fontdir = os.getcwd()
-        subfontdir = re.sub(cillegal, '_', s[3].upper())
-        subfontpath = path.join(fontdir, subfontdir, fontname + subfontext)
+        fontname = re.sub(cillegal, '_', s[3])
+        subfontpath = path.join(fontdir, fontname + subfontext)
         #print(fontdir, subfontpath)
-        if not path.exists(path.dirname(subfontpath)): 
-            try:
-                os.mkdir(path.dirname(subfontpath))
-            except:
-                subfontpath = path.join(fontdir, fontname + subfontext)
-                print('\033[1;31m[ERROR] 创建文件夹\"{0}\"失败\033[0m'.format(fontdir))
+        # if not path.exists(path.dirname(subfontpath)): 
+        #     try:
+        #         os.mkdir(path.dirname(subfontpath))
+        #     except:
+        #         subfontpath = path.join(fontdir, fontname + subfontext)
+        #         print('\033[1;31m[ERROR] 创建文件夹\"{0}\"失败\033[0m'.format(fontdir))
         subsetarg = [s[0], '--text={0}'.format(s[2]), '--output-file={0}'.format(subfontpath), '--font-number={0}'.format(s[1]), '--passthrough-tables']
         try:
             subset.main(subsetarg)
         except PermissionError:
-            print('\033[1;31m[ERROR] 文件\"{0}\"访问失败[0m'.format(path.basename(subfontpath)))
+            print('\033[1;31m[ERROR] 文件\"{0}\"访问失败\033[0m'.format(path.basename(subfontpath)))
         except:
-            print('\033[1;31m[ERROR] {0}[0m'.format(sys.exc_info()))
+            # print('\033[1;31m[ERROR] 失败字符串: \"{0}\" \033[0m'.format(s[2]))
+            print('\033[1;31m[ERROR] {0}\033[0m'.format(sys.exc_info()))
             print('\033[1;31m[WARNING] 字体\"{0}\"子集化失败，将会保留完整字体\033[0m'.format(path.basename(s[0])))
-            crcnewf = subfontpath
-            shutil.copy(s[0], crcnewf)
+            # crcnewf = ''.join([path.splitext(subfontpath)[0], fontext])
+            # shutil.copy(s[0], crcnewf)
+            ttLib.TTFont(s[0], lazy=False, fontNumber=int(s[1])).save(subfontpath, False)
             subfontcrc = None
-            newfont_name[s[3]] = [crcnewf, subfontcrc]
+            # newfont_name[s[3]] = [crcnewf, subfontcrc]
+            newfont_name[s[3]] = [subfontpath, subfontcrc]
             continue
         #os.system('pyftsubset {0}'.format(' '.join(subsetarg)))
         if path.exists(subfontpath): 
@@ -536,9 +578,7 @@ def assFontSubset(assfont: dict, fontdir: str) -> dict:
             if len(subfontcrc) < 8: subfontcrc = '0' + subfontcrc
             # print('CRC32: {0} \"{1}\"'.format(subfontcrc, path.basename(s[0])))
             subfontbyte.close()
-            if fontext[1:].lower() in ['otc', 'ttc']:
-                rawf = ttLib.TTCollection(s[0], lazy=True)[int(s[1])]
-            else: rawf = ttLib.TTFont(s[0], lazy=True)
+            rawf = ttLib.TTFont(s[0], lazy=True, fontNumber=int(s[1]))
             newf = ttLib.TTFont(subfontpath, lazy=False)
             if len(newf['name'].names) == 0:
                 for i in range(0,7):
@@ -560,7 +600,8 @@ def assFontSubset(assfont: dict, fontdir: str) -> dict:
                 crcnewf = subfontpath
                 newf.close()
                 if not subfontpath == s[0]: os.remove(subfontpath)
-                shutil.copy(s[0], crcnewf)
+                # shutil.copy(s[0], crcnewf)
+                rawf.save(crcnewf, False)
                 subfontcrc = None
             else:
                 crcnewf = '.{0}'.format(subfontcrc).join(path.splitext(subfontpath))
@@ -587,6 +628,7 @@ def assFontSubset(assfont: dict, fontdir: str) -> dict:
 #   newasspath: 新ass文件的绝对路径
 def assFontChange(fullass: list, newfont_name: dict, asspath: str, styleline: int, 
                         font_pos: int, outdir: str = '', ncover: bool = False) -> str:
+    # 扫描Style各行，并替换掉字体名称
     for i in range(styleline + 2, len(fullass)):
         if len(fullass[i].split(':')) < 2: 
             if re.search(style_read, '\n'.join(fullass[i + 1:])) is None: 
@@ -599,11 +641,13 @@ def assFontChange(fullass: list, newfont_name: dict, asspath: str, styleline: in
             if not newfont_name[fontstr][1] is None:
                 fullass[i] = fullass[i].replace(fontstr, newfont_name[fontstr][1])
     if path.exists(path.dirname(outdir)):
-        try:
-            if not path.isdir(outdir):
+        if not path.isdir(outdir):
+            try:
                 os.mkdir(outdir)
-        except:
-            print('\033[1;31m[ERROR] 创建文件夹\"{0}\"失败\033[0m'.format(outdir))
+            except:
+                print('\033[1;31m[ERROR] 创建文件夹\"{0}\"失败\033[0m'.format(outdir))
+                outdir = os.getcwd()
+    print('\033[1;33m字幕输出路径: \"{0}\"\033[0m'.format(outdir))
     if path.isdir(outdir): 
         newasspath = path.join(outdir, '.subset'.join(path.splitext(path.basename(asspath))))
     else: newasspath = '.subset'.join(path.splitext(asspath))
@@ -657,7 +701,7 @@ def ASFMKV(file: str, outfile: str = '', asslangs: list = [], asspaths: list = [
             assnote = assfn[(assfn.find(fn) + len(fn)):].replace('.subset', '')
             #print(assfn, fn, assnote)
             if len(assnote) > 1:
-                mkvargs.extend(['--track-name', '0:{0}'.format(assnote[1:])])
+                mkvargs.extend(['--track-name', '0:{0}'.format(assnote.lstrip('.'))])
             if len(asslangs) > 0 and path.splitext(s)[1][1:].lower() not in ['idx']:
                 mkvargs.append('--language')
                 if i < len(asslangs):
@@ -685,13 +729,14 @@ def ASFMKV(file: str, outfile: str = '', asslangs: list = [], asspaths: list = [
             .format(path.splitext(file)[0], datetime.now().strftime('%Y-%m%d-%H%M-%S_%f')), mkvjsonp))
     elif not notfont:
         for p in asspaths:
-            print('\033[1;32m成功: \"{0}\"\033[0m'.format(p))
-            try:
-                os.remove(p)
-            except:
-                print('\033[1;33m[ERROR] 文件\"{0}\"删除失败\033[0m'.format(p))
+            print('\033[1;32m封装成功: \033[1;37m\"{0}\"\033[0m'.format(p))
+            if path.splitext(p)[1][1:].lower() in ['ass', 'ssa']:
+                try:
+                    os.remove(p)
+                except:
+                    print('\033[1;33m[ERROR] 文件\"{0}\"删除失败\033[0m'.format(p))
         for f in fontpaths:
-            print('\033[1;32m成功: \"{0}\"\033[0m'.format(f[0]))
+            print('\033[1;32m封装成功: \033[1;37m\"{0}\"\033[0m'.format(f[0]))
             try:
                 os.remove(f[0])
             except:
@@ -787,6 +832,7 @@ def getSubtitles(medias: list, cpath: str) -> dict:
 #   newfont_name: 词典，{ 原字体名 : [ 新字体绝对路径, 新字体名 ] }
 #   ??? : 数值，mkvmerge的返回值；如果 mux = False，返回-1
 def main(font_name: dict, asspath: list, outdir: list = ['', '', ''], mux: bool = False, vpath: str = '', asslangs: list = []):
+    print('')
     outdir_temp = outdir[:3]
     outdir = ['', '', '']
     for i in range(0, len(outdir_temp)):
@@ -817,8 +863,8 @@ def main(font_name: dict, asspath: list, outdir: list = ['', '', ''], mux: bool 
     newasspath = []
     fo = ''
     if not notfont:
-        print('\n字体名称总数: {0}'.format(len(font_name.keys())))
-        noass = False
+        # print('\n字体名称总数: {0}'.format(len(font_name.keys())))
+        # noass = False
         for i in range(0, len(asspath)):
             s = asspath[i]
             if path.splitext(s)[1][1:].lower() not in ['ass', 'ssa']:
@@ -860,7 +906,7 @@ def main(font_name: dict, asspath: list, outdir: list = ['', '', ''], mux: bool 
             asslangs=asslangs, asspaths=newasspath, fontpaths=list(newfont_name.values()))
         if not notfont:
             for ap in newasspath:
-                if path.exists(path.dirname(ap)):
+                if path.exists(path.dirname(ap)) and path.splitext(ap)[1][1:].lower() not in ['ass', 'ssa']:
                     try:
                         os.rmdir(path.dirname(ap))
                     except:
@@ -894,7 +940,7 @@ mkvmv = '\n\033[1;33m没有检测到 mkvmerge\033[0m'
 if os.system('mkvmerge -V 1>nul 2>nul') > 0:
     no_mkvm = True
 else: 
-    print('\n\033[1;33m正在获取 mkvmerge 语言编码列表和支持格式列表...\033[0m')
+    print('\n\n\033[1;33m正在获取 mkvmerge 语言编码列表和支持格式列表，请稍等...\033[0m')
     mkvmv = '\n' + os.popen('mkvmerge -V --ui-language en', mode='r').read().replace('\n', '')
     extget = re.compile(r'\[.*\]')
     langmkv = os.popen('mkvmerge --list-languages', mode='r')
@@ -1248,6 +1294,7 @@ Copyright(c) 2022 yyfll
 依赖:
 fontTools    |  MIT License
 chardet      |  LGPL-2.1 License
+colorama     |  BSD-3 License
 mkvmerge     |  GPL-2 License
 ''')
     print('for more information:\nhttps://www.apache.org/licenses/')
