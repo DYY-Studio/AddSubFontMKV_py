@@ -11,6 +11,7 @@ import shutil
 from fontTools import ttLib
 from fontTools import subset
 import chardet
+from chardet.universaldetector import UniversalDetector
 import os
 from os import path
 import sys
@@ -132,9 +133,18 @@ def assAnalyze(asspath: str, fontlist: dict = {}, onlycheck: bool = False):
     style = re.compile(r'^\[V4.*Styles\]$')
     event = re.compile(r'^\[Events\]$')
     # 识别文本编码并读取整个SubtitleStationAlpha文件到内存
+    print('\033[1;33m正在分析字幕: \033[1;37m\"{0}\"\033[0m'.format(path.basename(asspath)))
     ass = open(asspath, mode='rb')
-    ass_b = ass.read()
-    ass_code = chardet.detect(ass_b)['encoding'].lower()
+    if path.getsize(asspath) <= 100 * 1024:
+        ass_b = ass.read()
+        ass_code = chardet.detect(ass_b)['encoding'].lower()
+    else:
+        detector = UniversalDetector()
+        for dt in ass:
+            detector.feed(dt)
+            if detector.done:
+                ass_code = detector.result['encoding']
+        detector.reset()
     ass.close()
     if not ass_code is None:
         ass = open(asspath, encoding=ass_code, mode='r')
