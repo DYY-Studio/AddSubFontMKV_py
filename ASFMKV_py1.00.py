@@ -144,6 +144,7 @@ def assAnalyze(asspath: str, fontlist: dict = {}, onlycheck: bool = False):
             detector.feed(dt)
             if detector.done:
                 ass_code = detector.result['encoding']
+                break
         detector.reset()
     ass.close()
     if not ass_code is None:
