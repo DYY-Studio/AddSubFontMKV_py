@@ -531,9 +531,10 @@ def checkAssFont(fontlist: dict, font_name: dict, assfont: dict = {}, onlycheck:
             # 如果找不到，将字体名称统一为小写再次查找
             font_name_cache = {}
             for ss in font_name.keys():
-                if ss.lower() == s or ss.upper() == s:
-                    font_name_cache[ss.lower()] = font_name[ss]
+                if ss.lower() == s.lower():
+                    font_name_cache[s] = font_name[ss]
                     cok = True
+                    break
             # update字体名称词典
             font_name.update(font_name_cache)
         else: cok = True
