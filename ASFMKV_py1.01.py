@@ -1391,6 +1391,8 @@ fontout, matchStrict, notfont))
                             mux = domux, outdir=[assout_cache, fontout_cache, mkvout_cache], vpath=k, asslangs=sublang)
                             if mkvr != -2:
                                 showMessageSubset(newasspaths, newfont_name)
+                            else:
+                                break
                 elif subonly:
                     newasspaths, newfont_name, mkvr = main(font_name, [subonlyp], 
                         mux = domux, outdir=[assout_cache, fontout_cache, mkvout_cache])
