@@ -1176,7 +1176,7 @@ def cListAssFont(font_name):
                         for r,ds,fs in os.walk(cpath):
                             for f in fs:
                                 if path.splitext(f)[1][1:].lower() in ['ass', 'ssa']:
-                                    a, fontlist, b, c = assAnalyze(path.join(r, f), fontlist, onlycheck=True)
+                                    a, fontlist, b, c, d = assAnalyze(path.join(r, f), fontlist, onlycheck=True)
                                     assfont, font_name = checkAssFont(fontlist, font_name, assfont, onlycheck=True)
                     else:
                         for f in os.listdir(cpath):
