@@ -16,7 +16,10 @@
 * `fn`标签精确替换（用于解决微软雅黑Bold和微软雅黑Regular同时使用时的问题）
 * DEBUG 大规模字幕扫描
 
-**由于开发者迷上了IDOLY PRIDE，更新进度延缓**
+**开发者迷上了IDOLY PRIDE，正在咕咕咕中**
+
+> <img src=https://s2.loli.net/2022/02/18/rPNclyITsCKnYMa.png width=50% /><br>你也可以在战地1见到开发者
+
 ## 最新更新
 ### Py1.02 Preview
 * `\fn`特效标签完全支持
