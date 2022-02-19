@@ -21,6 +21,8 @@
 
 > <img src=https://s2.loli.net/2022/02/18/rPNclyITsCKnYMa.png width=50% /><br>你也可以在战地1见到开发者
 
+## 已知问题
+* 找不到字体：汉仪旗黑
 ## 最新更新
 ### Py1.02 Preview
 * `\fn`特效标签完全支持
