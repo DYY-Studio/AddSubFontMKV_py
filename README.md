@@ -27,6 +27,7 @@
 
 ## 已知问题
 * 找不到字体：汉仪旗黑、Avenir Next W1G Medium
+* 区分大小写：Microsoft YaHei
 ## 最新更新
 ### Py1.02 Preview
 * `\fn`特效标签完全支持
