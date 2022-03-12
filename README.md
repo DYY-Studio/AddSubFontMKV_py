@@ -18,9 +18,10 @@
 如果有类似的需求，推荐暂且使用稳定的ASFMKV批处理版（也有少量未修复的BUG，但稳定性好）
 
 ## 已知问题
-* 找不到字体：汉仪旗黑、Avenir Next W1G Medium
-* 区分大小写：Microsoft YaHei
-* 子集化的字幕难以还原（没有注释名称对应表）
+* ~~找不到字体：汉仪旗黑、Avenir Next W1G Medium~~（Preview2 修复）
+* ~~区分大小写：Microsoft YaHei~~（Preview2 修复）
+* ~~子集化的字幕难以还原（没有注释名称对应表）~~（Preview2 修复）
+* fn标签中无法根据字体家族替换（Preview3 进行中）
 
 ## 版本前瞻（画大饼）
 * 字体来源优先级
@@ -33,6 +34,9 @@
 * DEBUG 大规模字幕扫描
 
 ## 最新更新
+### Py1.02 Preview3（进行中，预计2022/3/12）
+* 新增lcidfil，预设仅读取以下语言的字体名称<br>*简体中文、正體中文、日本語、English（US）、한국어*<br>或其在`platformID`、`languageID`标注为Unicode/Mac-Roman编码的名称
+* 修复fn标签中无法在字体家族中搜索的问题
 ### Py1.02 Preview2
 * 新增字体搜索功能
 * 新增旧字体检视功能
