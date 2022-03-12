@@ -380,8 +380,8 @@ def assAnalyze(asspath: str, fontlist: dict = {}, onlycheck: bool = False):
         itl = [its for its in re.findall(r'\{.*?\}', eventftext) if re.search(r'\\fn.*?\}', its) is not None]
         if len(itl) > 0:
             fn = ''
-            fn_line = [i]
             while len(itl) > 0:
+                fn_line = [i]
                 itpos = eventftext.find(itl[0])
                 it = (itpos, itpos + len(itl[0]))
                 s = eventftext[(it[0] + 1):(it[1] - 1)]
@@ -413,6 +413,8 @@ def assAnalyze(asspath: str, fontlist: dict = {}, onlycheck: bool = False):
                     # s = re.sub(effectDel, '', eventftext[:it[0]])
                     # print('add', s)
                     # print('fn', fn)
+                fn_lines.append(fn_line)
+                del fn_line
                 eventftext = eventftext[it[1]:]
                 # print('ef', eventftext)
                 itl = itl[1:]
@@ -435,7 +437,6 @@ def assAnalyze(asspath: str, fontlist: dict = {}, onlycheck: bool = False):
                     if len(fn) > 0:
                         fontlist = fontlistAdd(fss, '?'.join([fn, fs[1], fs[2]]), fontlist)
                     else: fontlist = fontlistAdd(fss, eventfont, fontlist)
-            fn_lines.append(fn_line)
         else:
             if not eventfont is None:
                 # 去除行中非文本部分，包括特效标签{}，硬软换行符
@@ -905,7 +906,7 @@ def checkAssFont(fontlist: dict, font_info: list, fn_lines: list = [], assfont: 
                 #print(assfont[dict_key])
         if directout >= 3:
             return None, [font_name, font_n_lower, font_family, warning_font]
-    if len(fn_lines) > 0:
+    if len(fn_lines) > 0 and not onlycheck:
         fn_lines_cache = fn_lines
         for i in range(0, len(fn_lines_cache)):
             s = fn_lines_cache[i]
@@ -1313,6 +1314,8 @@ def main(font_info: list, asspath: list, outdir: list = ['', '', ''], mux: bool 
     assfont = {}
     fontlist = {}
     newasspath = []
+    fullass = []
+    newfont_name = {}
     fo = ''
     if not notfont:
         # print('\n字体名称总数: {0}'.format(len(font_name.keys())))
