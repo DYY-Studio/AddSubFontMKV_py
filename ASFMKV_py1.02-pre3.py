@@ -1617,7 +1617,7 @@ def showMessageSubset(newasspaths: list, newfont_name: dict):
 
 def cFontSubset(font_info):
     global extlist, v_subdir, s_subdir, rmAssIn, rmAttach, \
-    mkvout, assout, fontout, matchStrict, no_mkvm, notfont, warningStop
+    mkvout, assout, fontout, matchStrict, no_mkvm, notfont, warningStop, errorStop
     leave = True
     while leave:
         cls()
