@@ -959,9 +959,6 @@ def assFontSubset(assfont: dict, fontdir: str) -> dict:
 #   newasspath: 新ass文件的绝对路径
 def assFontChange(fullass: list, newfont_name: dict, asspath: str, styleline: int, infoline: int,
                         font_pos: int, outdir: str = '', ncover: bool = False, fn_lines: list = []) -> str:
-    for k in newfont_name.keys():
-        fullass.insert(infoline, '; Font Subset: {0} - {1}'.format(k, newfont_name[k][1]))
-    fullass.insert(infoline, '; ASFMKV_py 1.02-Pre2')
     # 扫描Style各行，并替换掉字体名称
     #print('正在替换style对应字体......')
     for i in range(styleline + 2, len(fullass)):
@@ -990,6 +987,9 @@ def assFontChange(fullass: list, newfont_name: dict, asspath: str, styleline: in
                     if k in fl[ti]:
                         fn_line = fn_line.replace(fl[ti], fl[ti].replace(k, newfont_name[k][1]))
             fullass[fl[0]] = fn_line
+    for k in newfont_name.keys():
+        fullass.insert(infoline, '; Font Subset: {0} - {1}'.format(k, newfont_name[k][1]))
+        fullass.insert(infoline, '; ASFMKV_py 1.02-Pre2')
     if path.exists(path.dirname(outdir)):
         if not path.isdir(outdir):
             try:
