@@ -989,7 +989,7 @@ def assFontChange(fullass: list, newfont_name: dict, asspath: str, styleline: in
             fullass[fl[0]] = fn_line
     for k in newfont_name.keys():
         fullass.insert(infoline, '; Font Subset: {0} - {1}'.format(k, newfont_name[k][1]))
-        fullass.insert(infoline, '; ASFMKV_py 1.02-Pre2')
+    fullass.insert(infoline, '; ASFMKV_py 1.02-Pre2')
     if path.exists(path.dirname(outdir)):
         if not path.isdir(outdir):
             try:
