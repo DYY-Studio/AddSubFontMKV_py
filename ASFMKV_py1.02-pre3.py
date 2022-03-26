@@ -632,7 +632,10 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, []]) -> list:
         for ti in range(0, len(tc)):
             t = tc[ti]
             # 读取字体的 'OS/2' 表的 'fsSelection' 项查询字体的粗体斜体信息
-            os_2 = bin(t['OS/2'].fsSelection)[2:].zfill(10)
+            try:
+                os_2 = bin(t['OS/2'].fsSelection)[2:].zfill(10)
+            except:
+                os_2 = '1'.zfill(10)
             isItalic = int(os_2[-1])
             isBold = int(os_2[-6])
             # isCustom = int(os_2[-7])
@@ -640,7 +643,10 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, []]) -> list:
             # 读取字体的 'name' 表
             fstyle = ''
             familyN = ''
-            indexs = len(t['name'].names)
+            try:
+                indexs = len(t['name'].names)
+            except:
+                break
             isWarningFont = False
             namestrl1 = []
             namestrl2 = []
@@ -1452,12 +1458,10 @@ def cListAssFont(font_info):
         cls()
         print('''ASFMKV-ListAssFontPy
 注意: 本程序由于设计原因，列出的是字体文件与其内部字体名的对照表
-
 选择功能:
 [L] 回到上级菜单
 [A] 列出全部字体
 [B] 检查并列出字幕所需字体
-
 切换开关:
 [1] 将结果写入文件: \033[1;33m{0}\033[0m
 [2] 拷贝所需字体: \033[1;33m{1}\033[0m
@@ -1625,13 +1629,10 @@ def cFontSubset(font_info):
     while leave:
         cls()
         print('''ASFMKV & ASFMKV-FontSubset
-
 选择功能:
 [A] 子集化字体
 [B] 子集化并封装
-
 [L] 回到上级菜单
-
 切换开关:
 [1] 检视媒体扩展名列表 及 语言编码列表
 [2] 搜索子目录(视频): \033[1;33m{0}\033[0m
@@ -1655,7 +1656,6 @@ fontout, matchStrict, notfont, warningStop, errorStop))
         if work in [1, 2]:
             cls()
             if work == 1: print('''子集化字体
-
 搜索子目录(视频): \033[1;33m{0}\033[0m
 搜索子目录(字幕): \033[1;33m{1}\033[0m
 严格字幕匹配: \033[1;33m{2}\033[0m
@@ -1665,7 +1665,6 @@ fontout, matchStrict, notfont, warningStop, errorStop))
 子集化失败中断: \033[1;33m{6}\033[0m
 '''.format(v_subdir, s_subdir, matchStrict, assout, fontout, warningStop, warningStop))
             else: print('''子集化字体并封装
-
 搜索子目录(视频): \033[1;33m{4}\033[0m
 搜索子目录(字幕): \033[1;33m{5}\033[0m
 移除内挂字幕: \033[1;33m{0}\033[0m
@@ -1802,7 +1801,6 @@ def cLicense():
     print('''AddSubFontMKV Python Remake 1.02 Preview3
 Apache-2.0 License
 Copyright(c) 2022 yyfll
-
 依赖:
 fontTools    |  MIT License
 chardet      |  LGPL-2.1 License
@@ -1817,11 +1815,9 @@ def cFontSearch(font_info: list):
     while leave == True:
         cls()
         print('''ASFMKV FontSearch
-
 请选择功能:
 [1] 完全匹配（不区分大小写）
 [2] 部分匹配（不区分大小写）
-
 [0] 回到主菜单
 ''')
         work = os.system('choice /M 请选择: /C 012')
@@ -1867,15 +1863,12 @@ if __name__=="__main__":
         work = 0
         print('''ASFMKV Python Remake 1.02-Pre3 | (c) 2022 yyfll{0}
 字体名称数: [\033[1;33m{2}\033[0m]（包含乱码的名称）
-
 请选择功能:
 [A] ListAssFont
 [B] 字体子集化 & MKV封装
-
 [S] 搜索字体
 [C] 检视重复字体: 重复名称[\033[1;33m{1}\033[0m]
 [W] 检视旧格式字体（可能无法子集化）: [\033[1;33m{3}\033[0m]
-
 其他:
 [D] 依赖与许可证
 [L] 直接退出'''.format(mkvmv, len(dupfont.keys()), len(font_info[0].keys()), len(font_info[3])))
