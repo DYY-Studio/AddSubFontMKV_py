@@ -238,14 +238,28 @@ def assAnalyze(asspath: str, fontlist: dict = {}, onlycheck: bool = False):
         if styleline != 0 and eventline != 0:
             break
 
+    ssRemove = []
     for s in range(infoline + 1, asslen):
         ss = fullass[s]
-        if ss.strip(' ')[0] == ';' and ss.lower().find('font subset') and len(ss.split(':')) > 1:
-            fr = ss.split(':')[1].split('-')
-            ssRecover[fr[0].strip(' ').rstrip('\n')] = ''.join(fr[1:]).strip(' ').rstrip('\n')
-        elif ss.strip(' ')[0] == '[':
+        if ss.strip(' ') == '':
+            continue
+        elif ss.strip(' ')[0] == '[' and ss.strip(' ')[-1] == ']':
             break
+        elif ss.strip(' ')[0] == ';' and ss.lower().find('font subset') and len(ss.split(':')) > 1:
+            fr = ss.split(':')[1].split('-')
+            ssRecover[fr[0].strip(' ').rstrip('\n')] = '-'.join(fr[1:]).strip(' ').rstrip('\n')
+            ssRemove.append(s)
         else: continue
+    
+    if len(ssRemove) > 0:
+        ssRemove.reverse()
+        for s in ssRemove:
+            fullass.pop(s)
+            asslen -= 1
+            infoline -= 1
+            styleline -= 1
+            eventline -= 1
+    del ssRemove
 
     # 获取Style的 Format 行，并用半角逗号分割
     style_format = ''.join(fullass[styleline + 1].split(':')[1:]).strip(' ').split(',')
