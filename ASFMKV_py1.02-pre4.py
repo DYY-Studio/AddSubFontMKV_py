@@ -492,7 +492,7 @@ def assAnalyze(asspath: str, fontlist: dict = {}, onlycheck: bool = False):
             #nsfile = path.join(nsdir, '.NoSubset'.join(path.splitext(path.basename(asspath))))
             nsfile = path.join(nsdir, path.basename(asspath))
             if not path.exists(nsdir): os.mkdir(nsdir)
-            recoverass = open(nsfile, mode='w')
+            recoverass = open(nsfile, mode='w', encoding='utf-8')
             recoverass.writelines(fullass)
             recoverass.close()
             print('\033[1;33m已恢复字幕: \033[0m\033[1m\"{0}\"\033[0m'.format(nsfile))
