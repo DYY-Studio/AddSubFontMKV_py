@@ -1147,7 +1147,7 @@ def assFontChange(fullass: list, newfont_name: dict, asspath: str, styleline: in
             fullass[fl[0]] = fn_line
     for k in newfont_name.keys():
         fullass.insert(infoline + 1, '; Font Subset: {1} - {0}\n'.format(k, newfont_name[k][1]))
-    fullass.insert(infoline + 1, '; ASFMKV_py 1.02-Pre5\n')
+    fullass.insert(infoline + 1, '; ASFMKV_py 1.02-Pre6\n')
     if path.exists(path.dirname(outdir)):
         if not path.isdir(outdir):
             try:
@@ -1449,7 +1449,7 @@ def cls():
 
 
 # 初始化字体列表 和 mkvmerge 相关参数
-os.system('title ASFMKV Python Remake 1.02-Pre5 ^| (c) 2022 yyfll ^| Apache-2.0')
+os.system('title ASFMKV Python Remake 1.02-Pre6 ^| (c) 2022 yyfll ^| Apache-2.0')
 font_list, font_name = getFileList(fontin)
 font_info = fontProgress(font_list, [font_name, {}, {}, []])
 del font_name
@@ -1856,7 +1856,7 @@ fontout, matchStrict, notfont, warningStop, errorStop))
 
 def cLicense():
     cls()
-    print('''AddSubFontMKV Python Remake 1.02 Preview4
+    print('''AddSubFontMKV Python Remake 1.02 Preview6
 Apache-2.0 License
 Copyright(c) 2022 yyfll
 依赖:
@@ -1919,7 +1919,7 @@ if os.system('choice /? 1>nul 2>nul') > 0:
 if __name__=="__main__":
     while 1:
         work = 0
-        print('''ASFMKV Python Remake 1.02-Pre5 | (c) 2022 yyfll{0}
+        print('''ASFMKV Python Remake 1.02-Pre6 | (c) 2022 yyfll{0}
 字体名称数: [\033[1;33m{2}\033[0m]（包含乱码的名称）
 请选择功能:
 [A] ListAssFont
