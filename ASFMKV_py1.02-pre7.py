@@ -1155,7 +1155,9 @@ def assFontChange(fullass: list, newfont_name: dict, asspath: str, styleline: in
             fn_line = fullass[fl[0]]
             for ti in range(1, len(fl)):
                 for k in fl[ti].keys():
-                    fn_line = fn_line.replace(k, k.replace(fl[ti][k][0], newfont_name[fl[ti][k][0]][1]))
+                    fname = fl[ti][k][0]
+                    if len(fname) > 0:
+                        fn_line = fn_line.replace(k, k.replace(fname, newfont_name[fname][1]))
             fullass[fl[0]] = fn_line
     for k in newfont_name.keys():
         fullass.insert(infoline + 1, '; Font Subset: {1} - {0}\n'.format(k, newfont_name[k][1]))
@@ -1478,8 +1480,11 @@ def templeFontLoad(_dir: str, font_info: list) -> list:
                 if path.isfile(fpath):
                     if path.splitext(fpath)[1][1:].lower() in ['ttf', 'ttc', 'otf', 'otc']:
                         font_list.append([fpath, '1'])
-    font_info = fontProgress(font_list, font_info, True)
-    print()
+    if len(font_list) > 0 :
+        font_info = fontProgress(font_list, font_info, True)
+        print()
+    else:
+        print('\033[1;32m目录下没有字体\033[0m')
     return font_info
 
 def cls():
