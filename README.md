@@ -18,6 +18,9 @@
 ## 版本前瞻（画大饼）
 * 字幕语言编码询问输入
 
+## 版本前瞻（开发中）
+* 来自 [RenameSubtitles_RE](https://github.com/DYY-Studio/RenameSubtitles_RE) 项目的字幕-视频匹配算法v1.1
+
 ## 最新更新
 ### Py1.02 Preview8
 * 回归最原始的批处理版ASFMKV体验，现在可以设置`o_fontload`禁用系统字体库了<br>*（不读取系统字体和自定义目录的字体，只通过工作目录字体和缺字时补充的字体工作）*
