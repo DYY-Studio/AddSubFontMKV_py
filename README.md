@@ -15,6 +15,10 @@
 
 在本脚本最需要版本号蹭蹭蹭蹦的时候我个人非常忙，真是非常抱歉
 
+## 目录
+| [最新更新](https://github.com/DYY-Studio/AddSubFontMKV_py/edit/main/README.md#%E6%9C%80%E6%96%B0%E6%9B%B4%E6%96%B0) | [能干什么](https://github.com/DYY-Studio/AddSubFontMKV_py/edit/main/README.md#%E8%83%BD%E5%B9%B2%E4%BB%80%E4%B9%88) | [运行环境](https://github.com/DYY-Studio/AddSubFontMKV_py/edit/main/README.md#%E5%AE%89%E8%A3%85%E4%BE%9D%E8%B5%96%E7%BB%84%E4%BB%B6%E5%92%8C%E7%A8%8B%E5%BA%8F) | [功能介绍](https://github.com/DYY-Studio/AddSubFontMKV_py/edit/main/README.md#%E5%8A%9F%E8%83%BD%E4%BB%8B%E7%BB%8D) | [自定义变量](https://github.com/DYY-Studio/AddSubFontMKV_py/edit/main/README.md#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E9%87%8F)
+| --- | --- | --- | --- | --- |
+
 ## 版本前瞻（画大饼）
 * 字幕语言编码询问输入
 
