@@ -1479,7 +1479,7 @@ def nameMatching(spath: str, medias: list):
     mStart, mEnd = namePosition([s[0] for s in medias])
     subs = getSubtitles(spath)['none']
     sStart, sEnd = namePosition([path.splitext(path.basename(s))[0] for s in subs])
-    sStartA, sEndA = namePosition([path.splitext(path.basename(s))[0][::-1] for s in subs], '.')
+    sStartA, sEndA = namePosition([path.splitext(path.basename(s))[0][::-1] for s in subs])
     # 生成第一次的 media_ass 和 renList，并询问
     media_ass = nameMatchingProgress(medias, mStart, mEnd, sStart, sEnd, subs)
     renList = renamePreview(media_ass, sStartA, sEndA)
@@ -1536,7 +1536,7 @@ def nameMatching(spath: str, medias: list):
             rt = 2
     else:
         if rt == 1:
-            logfile = open(path.join(spath, 'subsRename_{0}.log'.format(datetime.now().strftime('%Y%m%d-%H%M%S'))), mode='w')
+            logfile = open(path.join(spath, 'subsRename_{0}.log'.format(datetime.now().strftime('%Y%m%d-%H%M%S'))), mode='w', encoding='utf-8')
             for r in renList:
                 try:
                     os.rename(r[0], path.join(path.dirname(r[0]), r[1]))
@@ -1545,7 +1545,7 @@ def nameMatching(spath: str, medias: list):
                 else:
                     print('\033[32;1m[SUCCESS]\033[33;0m \"{0}\"\n          \033[0m>>> \033[1m\"{1}\"\033[0m'.format(path.basename(r[0]), r[1]))
                     try:
-                        logfile.write('{0}|{1}'.format(r[0], r[1]))
+                        logfile.write('{0}|{1}\n'.format(r[0], r[1]))
                     except:
                         print('\033[31;1m[ERROR] 日志文件写入失败\033[0m')
             logfile.close()
@@ -1598,6 +1598,7 @@ def renamePreview(media_ass: dict, sStartA: int = 0, sEndA: str = '', ann: str =
                 elif len(sl) > 1:
                     ann = '.sub{0}'.format(sl.index(s))
                     print('注释自动检测失败，自动添加防重名注释')
+                del rsName
             else:
                 if sl.index(s) <= len(annl) - 1:
                     ann = '.' + annl[sl.index(s)].lstrip('.')
@@ -1633,14 +1634,34 @@ def namePosition(files: list):
             sStop = False
             dStart = 0
             dEnd = ''
+            dEndC = [0, 0, 0]
             for i in range(0, len(m1), step):
                 if i >= len(m2): break
                 if m1[i] != m2[i] or sStop:
-                    sStop = True
-                    if dStart == 0: dStart = i
-                    if m1[i] == m2[i]:
-                        dEnd = m1[i]
-                        break
+                    if sStop:
+                        if not m1[i].isnumeric():
+                            dEndC[0] = i
+                        if not m2[i].isnumeric():
+                            dEndC[1] = i
+                        if m1[i] == m2[i] and not m1[i].isnumeric() and not m2[i].isnumeric():
+                            dEndC[2] = i
+                        if dEndC[0] * dEndC[1] * dEndC[2] > 0:
+                            break
+                    else:
+                        sStop = True
+                        dStart = i
+            dEndCmostC = 0
+            dEndCmost = 0
+            for i in set(dEndC):
+                if dEndCmostC < dEndC.count(i):
+                    dEndCmost = i
+            if dEndCmostC == 1:
+                dEndCmost = dEndC[0]
+                for i in dEndC:
+                    if i < dEndCmost:
+                        dEndCmost = i
+            dEnd = m1[dEndCmost]
+            del dEndCmost, dEndCmostC
             if len(dEnd) > 0: diffList[m1].append((dStart, dEnd, m2))
             del sStop
         apStart = []
@@ -1668,9 +1689,7 @@ def namePosition(files: list):
         diffList['mStart'].append(mStart)
         diffList['mEnd'].append(mEnd)
         del apStart, alStart, apEnd, alEnd
-        # print(m1[0])
-        # for l in diffList[m1[0]]:
-        #     print(l)
+    del m1, m2
     mStart, mStartC, mEnd, mEndC = 0, 0, '', 0
     for l in set(diffList['mStart']):
         c = diffList['mStart'].count(l)
@@ -2379,7 +2398,7 @@ def loadMain(reload: bool = False):
     cls()
     if o_fontload: fltip = '\033[1;35m已禁用系统字体读取\033[0m'
     else: fltip = '包含乱码的名称'
-    print('''ASFMKV Python Remake 1.02-Pre9 | (c) 2022 yyfll{0}
+    print('''ASFMKV Python Remake 1.02-Pre9_2 | (c) 2022 yyfll{0}
 字体名称数: [\033[1;33m{2}\033[0m]（{4}）
 请选择功能:
 [A] ListAssFont
@@ -2482,16 +2501,86 @@ def loadMain(reload: bool = False):
             sPath = input('字幕目录:').strip(' ').strip('\"').strip('\'')
         else:
             if not nomatching > 2:
-                nomatching = 0
-                vPath = input('视频目录:').strip('\"').strip('\'')
-                while not (path.exists(vPath) and path.isdir(vPath)) or nomatching <= 2:
-                    nomatching += 1
-                    if nomatching > 2: 
-                        print('回到主界面')
-                        break
+                logfiles = []
+                for f in os.listdir(sPath):
+                    if f[:11].lower() == 'subsrename_':
+                        logfiles.append(f)
+                if len(logfiles) > 0:
+                    if os.system('choice /M 检测到重命名记录，您要撤销之前的重命名吗？') == 1:
+                        logCount = 0
+                        nomatching = 0
+                        if len(logfiles) > 1:
+                            print('请选择您要撤销到的时间点')
+                            for i in range(0, len(logfiles)):
+                                print('[{0}] {1}'.format(i, logfiles[i][11:]))
+                            print('')
+                            logCountC = input('请输入方括号内的数字:')
+                            while not logCountC.isnumeric():
+                                nomatching += 1
+                                if nomatching > 2:
+                                    logCount = -1
+                                    break
+                                print('输入有误，请重新输入；或者继续有误输入{0}次退出'.format(3 - nomatching))
+                                logCountC = input('请输入方括号内的数字:')
+                            else:
+                                logCount = logCountC
+                            if logCount < 0: 
+                                logCount = -logCount
+                                print('输入数字不能为负，已自动取相反数')
+                            if logCount > len(logfiles) - 1: 
+                                logCount = len(logfiles) - 1
+                                print('输入数字过大，已自动调整为最后一项')
+                            del logCountC
+                        if logCount >= 0:
+                            renCache = {}
+                            for i in range(0, logCount + 1):
+                                logfile = open(path.join(sPath, logfiles[i]), mode='r', encoding='utf-8')
+                                for l in logfile.readlines():
+                                    l = l.strip('\n').split('|')
+                                    if len(l) < 2: continue
+                                    if l[1] in renCache:
+                                        renCache[path.basename(l[0])] = (renCache[l[1]][0], l[0])
+                                        del renCache[l[1]]
+                                    else:
+                                        renCache[path.basename(l[0])] = (path.join(path.dirname(l[0]), l[1]), l[0])
+                                logfile.close()
+                            cls()
+                            print('[重命名预览]\n')
+                            for r in renCache.keys():
+                                print("\033[1m\"{0}\"\033[0m".format(path.basename(renCache[r][0])))
+                                print('>>>> \033[33;1m\"{0}\"\033[0m\n'.format(r))
+                            print('')
+                            if os.system('choice /M 是否要执行？') == 1:
+                                nodel = False
+                                for r in renCache.values():
+                                    try:
+                                        os.rename(r[0], r[1])
+                                    except:
+                                        print('\033[31;1m[ERROR]\033[0m 文件\"\033[1m{0}\033[0m\"重命名失败'.format(path.basename(r[0])))
+                                        nodel = True
+                                    else:
+                                        print('''\033[32;1m[SUCCESS]\033[0m \"\033[1m{0}\033[0m\"
+          >>>> \"\033[33;1m{1}\033[0m\"'''.format(path.basename(r[0]), path.basename(r[1])))
+                            nomatching = 3
+                            if not nodel:
+                                for l in logfiles:
+                                    try:
+                                        os.remove(path.join(sPath, l))
+                                    except:
+                                        pass
+                if nomatching > 2: 
+                    print('回到主界面')
+                else:
+                    nomatching = 0
                     vPath = input('视频目录:').strip('\"').strip('\'')
-                if nomatching <= 2: nameMatching(sPath, getMediaFilelist(vPath))
-                else: print('回到主界面')
+                    while not (path.exists(vPath) and path.isdir(vPath)):
+                        nomatching += 1
+                        if nomatching > 2: 
+                            print('回到主界面')
+                            break
+                        vPath = input('视频目录:').strip('\"').strip('\'')
+                    if nomatching <= 2: nameMatching(sPath, getMediaFilelist(vPath))
+                    else: print('回到主界面')
             else:
                 print('回到主界面')
         os.system('pause')
@@ -2506,5 +2595,7 @@ except Exception as e:
     print('\n\033[31;1m')
     traceback.print_exc()
     print('\033[0m\n')
-    os.system('pause')
-    os.system('pause')
+    if os.system('choice /M 您要重新启动本程序吗？') == 1:
+        os.system('start cmd /c py \"{0}\"'.format(path.realpath(__file__)))
+    else:
+        os.system('pause')
