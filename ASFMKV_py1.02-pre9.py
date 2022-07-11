@@ -1476,13 +1476,19 @@ def nameMatching(spath: str, medias: list):
   medias: 媒体文件列表，遵循格式为 [[文件名(无扩展名), 完整路径], ...]
     '''
     # 调用各函数获得剧集位置信息及字幕文件列表
+    if len(medias) == 0:
+        print('找不到媒体文件')
+        return None
     mStart, mEnd = namePosition([s[0] for s in medias])
     subs = getSubtitles(spath)['none']
+    if len(subs) == 0:
+        print('找不到字幕文件')
+        return None
     sStart, sEnd = namePosition([path.splitext(path.basename(s))[0] for s in subs])
     sStartA, sEndA = namePosition([path.splitext(path.basename(s))[0][::-1] for s in subs])
     # 生成第一次的 media_ass 和 renList，并询问
     media_ass = nameMatchingProgress(medias, mStart, mEnd, sStart, sEnd, subs)
-    renList = renamePreview(media_ass, sStartA, sEndA)
+    renList, isSkip = renamePreview(media_ass, sStartA, sEndA)
     annl = []
     ann = ''
     if len(renList) > 0:
@@ -1490,11 +1496,15 @@ def nameMatching(spath: str, medias: list):
 如果注释部分不正确您可以选择\033[33;1m[A]\033[0m手动输入字幕注释
 如果文件匹配不正确您可以选择\033[33;1m[F]\033[0m手动输入匹配规则''')
         rt = os.system('choice /M 请选择 /C YNAF')
+    elif not isSkip:
+        cls()
+        print('视频-字幕匹配失败，请手动输入匹配规则\n')
+        rt = 4
     else:
         rt = 2
     while rt in [0,3,4]:
         if rt == 4:
-            cls()
+            if len(renList) > 0: cls()
             print('''请将剧集所在位置用\"\033[33;1m:\033[0m\"代替
 如 \"\033[30;1m[VCB-Studio] Accel World [\033[33;1m01\033[30;1m][720p][x265_aac].mp4\033[0m\"
 替换为 \"\033[30;1m[VCB-Studio] Accel World [\033[33;1m:\033[30;1m][720p][x265_aac].mp4\033[0m\"
@@ -1526,12 +1536,16 @@ def nameMatching(spath: str, medias: list):
                 if ann[0] != '.': ann = '.' + ann
         else:
             break
-        renList = renamePreview(media_ass, ann=re.sub(cillegal, '_', ann), annl=annl)
+        renList, isSkip = renamePreview(media_ass, ann=re.sub(cillegal, '_', ann), annl=annl)
         if len(renList) > 0:
             print('''请确认重命名是否正确
 如果注释部分不正确您可以选择\033[33;1m[A]\033[0m手动输入字幕注释
 如果文件匹配不正确您可以选择\033[33;1m[F]\033[0m手动输入匹配规则''')
             rt = os.system('choice /M 请选择 /C YNAF')
+        elif not isSkip:
+            cls()
+            print('视频-字幕匹配失败，请手动输入匹配规则\n')
+            rt = 4
         else:
             rt = 2
     else:
@@ -1573,6 +1587,7 @@ def renamePreview(media_ass: dict, sStartA: int = 0, sEndA: str = '', ann: str =
     cls()
     print('[重命名预览]\n')
     renList = []
+    isSkip = False
     for k in media_ass.keys():
         sl = media_ass[k]
         annlUp = 0
@@ -1582,10 +1597,12 @@ def renamePreview(media_ass: dict, sStartA: int = 0, sEndA: str = '', ann: str =
                 if len(bname) >= len(k[0]):
                     if k[0] == bname[:len(k[0])]:
                         print('\033[33;1m跳过已匹配字幕\033[0m \033[1m\"{0}\"\033[0m'.format(bname))
+                        isSkip = True
                         continue
             else:
                 if k[0] in bname:
                     print('\033[33;1m跳过已匹配字幕\033[0m \033[1m\"{0}\"\033[0m'.format(bname))
+                    isSkip = True
                     continue
             if len(annl) == 0:
                 rsName = path.splitext(bname)[0][::-1]
@@ -1611,7 +1628,7 @@ def renamePreview(media_ass: dict, sStartA: int = 0, sEndA: str = '', ann: str =
             renList.append((s, '{0}{1}{2}'.format(k[0], ann, path.splitext(s)[1])))
     if len(renList) > 0:
         print('字幕的注释是指类似以下文件名的高亮部分\n\"\033[30;1m[VCB-Studio] Accel World [01][720p][x265_aac]\033[33;1m.Kamigami-sc\033[30;1m.ass\033[0m\"')
-    return renList
+    return renList, isSkip
 
 
 def namePosition(files: list):
@@ -1626,7 +1643,9 @@ def namePosition(files: list):
     diffList['mEnd'] = []
     sOffset = 1
     step = 1
-    for m1 in files:
+    for i1 in range(0, len(files)):
+        m1 = files[i1]
+        print('\r' + '正在计算\033[1;32m{0}/{1} {2:.2f}%\033[0m'.format(i1 + 1, len(files), ((i1 + 1)/len(files))*100), end='', flush=True)
         diffList[m1] = []
         for m2 in files:
             if m2 == m1:
@@ -1689,6 +1708,7 @@ def namePosition(files: list):
         diffList['mStart'].append(mStart)
         diffList['mEnd'].append(mEnd)
         del apStart, alStart, apEnd, alEnd
+    print('')
     del m1, m2
     mStart, mStartC, mEnd, mEndC = 0, 0, '', 0
     for l in set(diffList['mStart']):
@@ -2398,7 +2418,7 @@ def loadMain(reload: bool = False):
     cls()
     if o_fontload: fltip = '\033[1;35m已禁用系统字体读取\033[0m'
     else: fltip = '包含乱码的名称'
-    print('''ASFMKV Python Remake 1.02-Pre9_2 | (c) 2022 yyfll{0}
+    print('''ASFMKV Python Remake 1.02-Pre9_2f1 | (c) 2022 yyfll{0}
 字体名称数: [\033[1;33m{2}\033[0m]（{4}）
 请选择功能:
 [A] ListAssFont
