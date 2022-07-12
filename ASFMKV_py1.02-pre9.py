@@ -2349,6 +2349,103 @@ def cFontSearch(font_info: list):
                     print('\033[1;31m没有找到所搜索的字体\033[0m')
                 os.system('pause')
 
+def cSVMatching():
+    cls()
+    print('Subtitles-Videos Filename Matching (Experiment)')
+    nomatching = 0
+    sPath = input('字幕目录:').strip(' ').strip('\"').strip('\'')
+    while not (path.exists(sPath) and path.isdir(sPath)):
+        nomatching += 1
+        if nomatching > 2: 
+            print('回到主界面')
+            break
+        sPath = input('字幕目录:').strip(' ').strip('\"').strip('\'')
+    else:
+        if not nomatching > 2:
+            logfiles = []
+            for f in os.listdir(sPath):
+                if f[:11].lower() == 'subsrename_':
+                    logfiles.append(f)
+            if len(logfiles) > 0:
+                if os.system('choice /M 检测到重命名记录，您要撤销之前的重命名吗？') == 1:
+                    logCount = 0
+                    nomatching = 0
+                    if len(logfiles) > 1:
+                        print('请选择您要撤销到的时间点')
+                        for i in range(0, len(logfiles)):
+                            print('[{0}] {1}'.format(i, logfiles[i][11:]))
+                        print('')
+                        logCountC = input('请输入方括号内的数字:')
+                        while not logCountC.isnumeric():
+                            nomatching += 1
+                            if nomatching > 2:
+                                logCount = -1
+                                break
+                            print('输入有误，请重新输入；或者继续有误输入{0}次退出'.format(3 - nomatching))
+                            logCountC = input('请输入方括号内的数字:')
+                        else:
+                            logCount = logCountC
+                        if logCount < 0: 
+                            logCount = -logCount
+                            print('输入数字不能为负，已自动取相反数')
+                        if logCount > len(logfiles) - 1: 
+                            logCount = len(logfiles) - 1
+                            print('输入数字过大，已自动调整为最后一项')
+                        del logCountC
+                    if logCount >= 0:
+                        renCache = {}
+                        for i in range(0, logCount + 1, -1):
+                            logfile = open(path.join(sPath, logfiles[i]), mode='r', encoding='utf-8')
+                            for l in logfile.readlines():
+                                l = l.strip('\n').split('|')
+                                if len(l) < 2: continue
+                                if l[1] in renCache:
+                                    renCache[path.basename(l[0])] = (renCache[l[1]][0], l[0])
+                                    del renCache[l[1]]
+                                else:
+                                    renCache[path.basename(l[0])] = (path.join(path.dirname(l[0]), l[1]), l[0])
+                            logfile.close()
+                        cls()
+                        print('[重命名预览]\n')
+                        for r in renCache.keys():
+                            print("\033[1m\"{0}\"\033[0m".format(path.basename(renCache[r][0])))
+                            print('>>>> \033[33;1m\"{0}\"\033[0m\n'.format(r))
+                        print('')
+                        if os.system('choice /M 是否要执行？') == 1:
+                            nodel = False
+                            for r in renCache.values():
+                                try:
+                                    os.rename(r[0], r[1])
+                                except:
+                                    print('\033[31;1m[ERROR]\033[0m 文件\"\033[1m{0}\033[0m\"重命名失败'.format(path.basename(r[0])))
+                                    nodel = True
+                                else:
+                                    print('''\033[32;1m[SUCCESS]\033[0m \"\033[1m{0}\033[0m\"
+        >>>> \"\033[33;1m{1}\033[0m\"'''.format(path.basename(r[0]), path.basename(r[1])))
+                        nomatching = 3
+                        if not nodel:
+                            for l in logfiles:
+                                try:
+                                    os.remove(path.join(sPath, l))
+                                except:
+                                    pass
+            if nomatching > 2: 
+                print('回到主界面')
+            else:
+                nomatching = 0
+                vPath = input('视频目录:').strip('\"').strip('\'')
+                while not (path.exists(vPath) and path.isdir(vPath)):
+                    nomatching += 1
+                    if nomatching > 2: 
+                        print('回到主界面')
+                        break
+                    vPath = input('视频目录:').strip('\"').strip('\'')
+                if nomatching <= 2: nameMatching(sPath, getMediaFilelist(vPath))
+                else: print('回到主界面')
+        else:
+            print('回到主界面')
+    os.system('pause')
+
 no_mkvm = False
 no_cmdc = False
 mkvmv = ''
@@ -2509,101 +2606,7 @@ def loadMain(reload: bool = False):
         if work2 != 2:
             exit()
     elif work == 9:
-        cls()
-        print('Subtitles-Videos Filename Matching (Experiment)')
-        nomatching = 0
-        sPath = input('字幕目录:').strip(' ').strip('\"').strip('\'')
-        while not (path.exists(sPath) and path.isdir(sPath)):
-            nomatching += 1
-            if nomatching > 2: 
-                print('回到主界面')
-                break
-            sPath = input('字幕目录:').strip(' ').strip('\"').strip('\'')
-        else:
-            if not nomatching > 2:
-                logfiles = []
-                for f in os.listdir(sPath):
-                    if f[:11].lower() == 'subsrename_':
-                        logfiles.append(f)
-                if len(logfiles) > 0:
-                    if os.system('choice /M 检测到重命名记录，您要撤销之前的重命名吗？') == 1:
-                        logCount = 0
-                        nomatching = 0
-                        if len(logfiles) > 1:
-                            print('请选择您要撤销到的时间点')
-                            for i in range(0, len(logfiles)):
-                                print('[{0}] {1}'.format(i, logfiles[i][11:]))
-                            print('')
-                            logCountC = input('请输入方括号内的数字:')
-                            while not logCountC.isnumeric():
-                                nomatching += 1
-                                if nomatching > 2:
-                                    logCount = -1
-                                    break
-                                print('输入有误，请重新输入；或者继续有误输入{0}次退出'.format(3 - nomatching))
-                                logCountC = input('请输入方括号内的数字:')
-                            else:
-                                logCount = logCountC
-                            if logCount < 0: 
-                                logCount = -logCount
-                                print('输入数字不能为负，已自动取相反数')
-                            if logCount > len(logfiles) - 1: 
-                                logCount = len(logfiles) - 1
-                                print('输入数字过大，已自动调整为最后一项')
-                            del logCountC
-                        if logCount >= 0:
-                            renCache = {}
-                            for i in range(0, logCount + 1):
-                                logfile = open(path.join(sPath, logfiles[i]), mode='r', encoding='utf-8')
-                                for l in logfile.readlines():
-                                    l = l.strip('\n').split('|')
-                                    if len(l) < 2: continue
-                                    if l[1] in renCache:
-                                        renCache[path.basename(l[0])] = (renCache[l[1]][0], l[0])
-                                        del renCache[l[1]]
-                                    else:
-                                        renCache[path.basename(l[0])] = (path.join(path.dirname(l[0]), l[1]), l[0])
-                                logfile.close()
-                            cls()
-                            print('[重命名预览]\n')
-                            for r in renCache.keys():
-                                print("\033[1m\"{0}\"\033[0m".format(path.basename(renCache[r][0])))
-                                print('>>>> \033[33;1m\"{0}\"\033[0m\n'.format(r))
-                            print('')
-                            if os.system('choice /M 是否要执行？') == 1:
-                                nodel = False
-                                for r in renCache.values():
-                                    try:
-                                        os.rename(r[0], r[1])
-                                    except:
-                                        print('\033[31;1m[ERROR]\033[0m 文件\"\033[1m{0}\033[0m\"重命名失败'.format(path.basename(r[0])))
-                                        nodel = True
-                                    else:
-                                        print('''\033[32;1m[SUCCESS]\033[0m \"\033[1m{0}\033[0m\"
-          >>>> \"\033[33;1m{1}\033[0m\"'''.format(path.basename(r[0]), path.basename(r[1])))
-                            nomatching = 3
-                            if not nodel:
-                                for l in logfiles:
-                                    try:
-                                        os.remove(path.join(sPath, l))
-                                    except:
-                                        pass
-                if nomatching > 2: 
-                    print('回到主界面')
-                else:
-                    nomatching = 0
-                    vPath = input('视频目录:').strip('\"').strip('\'')
-                    while not (path.exists(vPath) and path.isdir(vPath)):
-                        nomatching += 1
-                        if nomatching > 2: 
-                            print('回到主界面')
-                            break
-                        vPath = input('视频目录:').strip('\"').strip('\'')
-                    if nomatching <= 2: nameMatching(sPath, getMediaFilelist(vPath))
-                    else: print('回到主界面')
-            else:
-                print('回到主界面')
-        os.system('pause')
+        cSVMatching()
     else: exit()
     cls()
 
