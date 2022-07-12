@@ -24,6 +24,9 @@
 ## 版本前瞻（画大饼）
 * 字幕语言编码询问输入
 
+## 版本前瞻（有计划）
+* UTF-16LE >> UTF-8-BOM 字幕自动批量转换
+
 ## 最新更新
 ### Py1.02 Preview9
 * 新增实验性功能，来自 [RenameSubtitles_RE](https://github.com/DYY-Studio/RenameSubtitles_RE) 项目的字幕-视频匹配
