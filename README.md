@@ -10,10 +10,12 @@
 浪费时间打磨5年的ASFMKV批处理的正统后继者（X）
 
 本脚本使用 Apache-2.0 许可证
-## 半成品状态
-由于部分功能是新开发的，目前仍存在比较大的问题
+## 关于Preview
+由于部分功能是新开发的，目前仍存在多多少少的小问题<br>在本脚本最需要版本号蹭蹭蹭蹦的时候我个人非常忙，真是非常抱歉
 
-在本脚本最需要版本号蹭蹭蹭蹦的时候我个人非常忙，真是非常抱歉
+**尽管目前的最新版本仍然是Preview版本，但是它们都相对稳定而可靠**
+
+**您不应该使用过时的Py1.02-Pre4之前的任何版本，它们甚至不能正确分析ASS文件**
 
 ## 目录
 | [最新更新](https://github.com/DYY-Studio/AddSubFontMKV_py#%E6%9C%80%E6%96%B0%E6%9B%B4%E6%96%B0) | [能干什么](https://github.com/DYY-Studio/AddSubFontMKV_py#%E8%83%BD%E5%B9%B2%E4%BB%80%E4%B9%88) | [运行环境](https://github.com/DYY-Studio/AddSubFontMKV_py#%E5%AE%89%E8%A3%85%E4%BE%9D%E8%B5%96%E7%BB%84%E4%BB%B6%E5%92%8C%E7%A8%8B%E5%BA%8F) | [功能介绍](https://github.com/DYY-Studio/AddSubFontMKV_py#%E5%8A%9F%E8%83%BD%E4%BB%8B%E7%BB%8D) | [自定义变量](https://github.com/DYY-Studio/AddSubFontMKV_py#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E9%87%8F)
@@ -36,6 +38,7 @@
 #### Preview9_2 Fix1
 * 现在会输出自动匹配规则计算进度了
 * 当自动匹配规则无效时，会要求用户输入而非直接退出
+* 修复了重命名撤回时读取日志顺序不正确的问题
 
 ## 能干什么？
 * 字体查重（借由**fontTools**实现，谢谢。）
