@@ -40,6 +40,8 @@
 暂时没有打包的计划，目前使用本版本需要安装 PyQt5<br>
 `pip3 install PyQt5 --upgrade`
 
+删除启动消息可以用文本编辑器直接翻到底，删去最后面的QMessageBox
+
 ### Py1.02 Preview9
 * 新增实验性功能，来自 [RenameSubtitles_RE](https://github.com/DYY-Studio/RenameSubtitles_RE) 项目的字幕-视频匹配
 * 脚本崩溃时会输出堆栈跟踪
