@@ -32,6 +32,14 @@
 * 启用子目录字体临时加载时程序崩溃
 
 ## 最新更新
+### PyQt Beta1 (实验性)
+*基于 Py1.02 Preview9_2f2*
+
+* PyQt5图形化界面
+
+暂时没有打包的计划，目前使用本版本需要安装 PyQt5<br>
+`pip3 install PyQt5 --upgrade`
+
 ### Py1.02 Preview9
 * 新增实验性功能，来自 [RenameSubtitles_RE](https://github.com/DYY-Studio/RenameSubtitles_RE) 项目的字幕-视频匹配
 * 脚本崩溃时会输出堆栈跟踪
