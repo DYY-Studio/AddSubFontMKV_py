@@ -3068,8 +3068,8 @@ class Ui_MW(object):
         self.refresh.setText(_translate("MW", "全局刷新"))
         self.Ddel.setText(_translate("MW", "删除"))
         self.Dadd.setText(_translate("MW", "添加"))
-        self.label_4.setText(_translate("MW", "视频"))
-        self.label_5.setText(_translate("MW", "字幕"))
+        self.label_4.setText(_translate("MW", "字幕"))
+        self.label_5.setText(_translate("MW", "视频"))
         self.addCustomF.setToolTip(_translate("MW", '自定义字体，可以是包含字体的文件夹（强制搜索子目录），也可以是单个字体文件'))
         self.text2.setToolTip(_translate("MW", '''字幕文件搜索规则
 请将字幕文件中的集数部分替换为半角冒号\":\"
