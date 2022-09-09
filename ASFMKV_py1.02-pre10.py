@@ -525,12 +525,12 @@ ASS分析部分
                                         fn = ssRecover[fn]
                                 fn_line.append({s: (fn, str(sp[2]), str(sp[3]))})
                                 break
+                        spaceAdd = list(set(re.findall(r'[\u0020\u3000]', fs[0])))
+                        if len(spaceAdd) > 0:
+                            for sa in spaceAdd:
+                                if not sa in fss:
+                                    fss = '{0}{1}'.format(fss, sa)
                         if len(fn) == 0:
-                            spaceAdd = list(set(re.findall(r'[\u0020\u3000]', fs[0])))
-                            if len(spaceAdd) > 0:
-                                for sa in spaceAdd:
-                                    if not sa in fss:
-                                        fss = '{0}{1}'.format(fss, sa)
                             fontlist = fontlistAdd(fss, eventfont, fontlist)
                         else:
                             fontlist = fontlistAdd(fss, '?'.join([fn, str(sp[2]), str(sp[3])]), fontlist)
