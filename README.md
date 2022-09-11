@@ -34,6 +34,8 @@
 ### PyQt Beta2 (实验性)
 * 更新了 Py1.02 Preview10 中修复的内容
 * 添加了目录选择窗口
+### Fix 2
+* 修复了QLineEdit无法接收拖入路径的问题
 ### PyQt Beta1 (实验性)
 *基于 Py1.02 Preview9_2f2*
 
