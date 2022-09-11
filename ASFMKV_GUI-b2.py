@@ -1135,6 +1135,8 @@ def assFontSubset(assfont: dict, fontdir: str):
         # print(fontdir, path.exists(path.dirname(fontdir)), path.exists(fontdir))
         fontname = re.sub(cillegal, '_', s[4])
         subfontpath = path.join(fontdir, fontname + subfontext)
+        if re.search(r'[0-9]', s[2]):
+            s[2] = '{0}{1}'.format(re.sub(r'[0-9]', '', s[2].replace('\n', '')), '0123456789')
         subsetarg = [s[0], '--text={0}'.format(s[2]), '--output-file={0}'.format(subfontpath),
                      '--font-number={0}'.format(s[1]), '--passthrough-tables']
         print('\r\033[1;32m[{0}/{1}]\033[0m \033[1m正在子集化…… \033[0m'.format(kip, lk), end='')
@@ -2568,7 +2570,7 @@ class eventW(object):
     def callMain(work: int):
         global ui, mkvout, assout, fontout
         _inpath = ui.vPathL.text().strip()
-        if len(_inpath) == 0 and work != 2:
+        if not path.exists(_inpath) and work != 2:
             _inpath = ui.sPathL.text().strip()
         if not path.exists(_inpath):
             ui.statusbar.showMessage('输入路径无效', 5000)
@@ -2581,10 +2583,7 @@ class eventW(object):
         else:
             mkvout, assout, fontout = _vpath, _spath, _fpath
             MW.setEnabled(False)
-            if ui.sPathL.text().strip() != _inpath:
-                cFontSubset(work, _inpath, ui.sPathL.text().strip())
-            else:
-                cFontSubset(work, _inpath)
+            cFontSubset(work, _inpath, ui.sPathL.text().strip())
             MW.setEnabled(True)
 
     def subsetClicked():
