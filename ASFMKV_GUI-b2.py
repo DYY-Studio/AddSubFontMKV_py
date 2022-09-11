@@ -1135,7 +1135,7 @@ def assFontSubset(assfont: dict, fontdir: str):
         # print(fontdir, path.exists(path.dirname(fontdir)), path.exists(fontdir))
         fontname = re.sub(cillegal, '_', s[4])
         subfontpath = path.join(fontdir, fontname + subfontext)
-        subsetarg = [s[0], '--text={0}{1}'.format(re.sub(r'[0-9]', '', s[2]), '0123456789'), '--output-file={0}'.format(subfontpath),
+        subsetarg = [s[0], '--text={0}'.format(s[2]), '--output-file={0}'.format(subfontpath),
                      '--font-number={0}'.format(s[1]), '--passthrough-tables']
         print('\r\033[1;32m[{0}/{1}]\033[0m \033[1m正在子集化…… \033[0m'.format(kip, lk), end='')
         ui.statusbar.showMessage('正在子集化 {1}/{2} \"{0}\" '.format(fontname, kip, lk))
@@ -2985,7 +2985,7 @@ class Ui_MW(object):
         self.sPathG = QGroupBox(self.centralwidget)
         self.sPathG.setObjectName(u"sPathG")
         self.sPathG.setGeometry(QRect(10, 50, 781, 51))
-        self.sPathL = QLineEdit(self.sPathG)
+        self.sPathL = dropQLineEdit(self.sPathG)
         self.sPathL.setObjectName(u"sPathL")
         self.sPathL.setGeometry(QRect(10, 20, 701, 20))
         self.pB_selectS = QPushButton(self.sPathG)
@@ -2994,7 +2994,7 @@ class Ui_MW(object):
         self.vPathG = QGroupBox(self.centralwidget)
         self.vPathG.setObjectName(u"vPathG")
         self.vPathG.setGeometry(QRect(10, 0, 781, 51))
-        self.vPathL = QLineEdit(self.vPathG)
+        self.vPathL = dropQLineEdit(self.vPathG)
         self.vPathL.setObjectName(u"vPathL")
         self.vPathL.setGeometry(QRect(10, 20, 701, 20))
         self.pB_selectV = QPushButton(self.vPathG)
