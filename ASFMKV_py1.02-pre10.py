@@ -1170,7 +1170,9 @@ def assFontSubset(assfont: dict, fontdir: str):
         # print(fontdir, path.exists(path.dirname(fontdir)), path.exists(fontdir))
         fontname = re.sub(cillegal, '_', s[4])
         subfontpath = path.join(fontdir, fontname + subfontext)
-        subsetarg = [s[0], '--text={0}{1}'.format(re.sub(r'[0-9]', '', s[2]), '0123456789'), '--output-file={0}'.format(subfontpath),
+        if re.search(r'[0-9]', s[2]):
+            s[2] = '{0}{1}'.format(re.sub(r'[0-9]', '', s[2].replace('\n', '')), '0123456789')
+        subsetarg = [s[0], '--text={0}'.format(s[2]), '--output-file={0}'.format(subfontpath),
                      '--font-number={0}'.format(s[1]), '--passthrough-tables']
         print('\r\033[1;32m[{0}/{1}]\033[0m \033[1m正在子集化…… \033[0m'.format(kip, lk), end='')
         try:
