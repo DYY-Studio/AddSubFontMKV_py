@@ -32,6 +32,8 @@
 
 ## 最新更新
 ### PyQt Beta2 (实验性)
+***PyQt5图形化界面***
+
 * 更新了 Py1.02 Preview10 中修复的内容
 * 添加了目录选择窗口
 #### Fix 2
@@ -39,18 +41,6 @@
 #### Fix 3
 * 补充了忘记添加的全部数字保留
 * 修复了在仅有字幕目录而无视频目录时，“子集化字体”导致程序崩溃的问题
-### PyQt Beta1 (实验性)
-*基于 Py1.02 Preview9_2f2*
-
-* PyQt5图形化界面
-
-暂时没有打包的计划，目前使用本版本需要安装 PyQt5<br>
-`pip3 install PyQt5 --upgrade`
-
-在该版本下，`o_fontload`无效，请保持它`False`。字体搜索功能作为DEBUG功能，不会加入。
-
-删除启动消息可以用文本编辑器直接翻到底，删去最后面的QMessageBox
-
 ### Py1.02 Preview10
 根据反馈及自我测试，修复了以下问题
 * 现在空格会被保留（如果有需要的话）
@@ -69,7 +59,9 @@
 ## 安装依赖组件和程序
 #### [Python](https://www.python.org/downloads/windows/)
 #### 运行库
-`pip3 install chardet fontTools colorama --upgrade`
+* CLI版本: `pip3 install chardet fontTools colorama --upgrade`
+* GUI版本: `pip3 install chardet fontTools PyQt5 --upgrade`
+
 #### [mkvmerge](https://mkvtoolnix.download/) (可选)
 
 下载并安装/解压 MKVToolNix，将安装目录添加到系统变量path中
