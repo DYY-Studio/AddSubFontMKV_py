@@ -18,14 +18,14 @@
 **您不应该使用过时的Py1.02-Pre4之前的任何版本，它们甚至不能正确分析ASS文件**
 
 ## 目录
-| [最新更新](https://github.com/DYY-Studio/AddSubFontMKV_py#%E6%9C%80%E6%96%B0%E6%9B%B4%E6%96%B0) | [能干什么](https://github.com/DYY-Studio/AddSubFontMKV_py#%E8%83%BD%E5%B9%B2%E4%BB%80%E4%B9%88) | [运行环境](https://github.com/DYY-Studio/AddSubFontMKV_py#%E5%AE%89%E8%A3%85%E4%BE%9D%E8%B5%96%E7%BB%84%E4%BB%B6%E5%92%8C%E7%A8%8B%E5%BA%8F) | [功能介绍](https://github.com/DYY-Studio/AddSubFontMKV_py#%E5%8A%9F%E8%83%BD%E4%BB%8B%E7%BB%8D) | [自定义变量](https://github.com/DYY-Studio/AddSubFontMKV_py#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E9%87%8F)
+| [最新更新](https://github.com/DYY-Studio/AddSubFontMKV_py#gui%E6%9C%80%E6%96%B0%E6%9B%B4%E6%96%B0) | [能干什么](https://github.com/DYY-Studio/AddSubFontMKV_py#%E8%83%BD%E5%B9%B2%E4%BB%80%E4%B9%88) | [运行环境](https://github.com/DYY-Studio/AddSubFontMKV_py#%E5%AE%89%E8%A3%85%E4%BE%9D%E8%B5%96%E7%BB%84%E4%BB%B6%E5%92%8C%E7%A8%8B%E5%BA%8F) | [功能介绍](https://github.com/DYY-Studio/AddSubFontMKV_py#%E5%8A%9F%E8%83%BD%E4%BB%8B%E7%BB%8D) | [自定义变量](https://github.com/DYY-Studio/AddSubFontMKV_py#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E9%87%8F)
 | --- | --- | --- | --- | --- |
 
 ## 版本前瞻（画大饼）
 * 字幕语言编码询问输入
 * UTF-16LE >> UTF-8-BOM 字幕自动批量转换
 
-## 最新更新（GUI）
+## GUI最新更新
 ### PyQt Beta2 (实验性)
 * 更新了 Py1.02 Preview10 中修复的内容
 * 添加了目录选择窗口
@@ -34,7 +34,7 @@
 #### Fix 3
 * 补充了忘记添加的全部数字保留
 * 修复了在仅有字幕目录而无视频目录时，“子集化字体”导致程序崩溃的问题
-## 最新更新（CLI）
+## CLI最新更新
 ### Py1.02 Preview11
 * 简易的乱码检测功能
 * 强化的字体名称修正
