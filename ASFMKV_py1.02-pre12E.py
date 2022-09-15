@@ -109,6 +109,10 @@ matchStrict = True
 #   True   不子集化
 #   False  子集化（如果失败，会保留原始字体；如果原始字体是TTC/OTC，则会保留其中的TTF/OTF）
 warningStop = False
+# ignoreLost 遇到字体内没有的字符时的处理方式
+#   True   删掉没有的字符，继续子集化
+#   False  中断（=errorStop）
+ignoreLost = True
 # errorStop 子集化失败后的处理方式
 #   True   终止批量子集化
 #   False  继续运行（运行方式参考warningStop）
@@ -1287,12 +1291,19 @@ def assFontSubset(assfont: dict, fontdir: str, font_info: list):
         print('\r\033[1;32m[{0}/{1}]\033[0m \033[1m正在子集化…… \033[0m'.format(kip, lk), end='')
         if re.search(r'[0-9]', s[2]):
             s[2] = '{0}{1}'.format(re.sub(r'[0-9]', '', s[2].replace('\n', '')), '0123456789')
-        
+
         # 通过CMAP映射表确认字体中是否有所需字符
         gfs, gfs_uni, out_of_range = charExistCheck(s[0], s[1], s[2])
         if len(out_of_range) > 0:
-            print('\n\033[1;31m[ERROR] 以下字符不在字体\"{1}\"内\033[0m\n\"{0}\"\n\033[1;31m[ERROR] 以上字符不在字体\"{1}\"内\033[0m'.format(out_of_range, s[3]))
-            return None
+            if ignoreLost:
+                print('\n\033[1;31m[WARNING] 已忽略不在字体中的字符\033[0m')
+            else:
+                print('\n\033[1;31m[ERROR] 以下字符不在字体\"{1}\"内\033[0m\n\"{0}\"\n\033[1;31m[ERROR] 以上字符不在字体\"{1}\"内\033[0m'.format(out_of_range, s[3]))
+                print('\033[1;31m[ERROR] 已停止子集化，如果您想要强行子集化，请启用ignoreLost\033[0m')
+                return None
+        if len(gfs) == 0:
+            print('\n\033[1;31m[WARNING] 没有要子集化的字符\033[0m')
+            continue
         # else:
         #     print('\n\033[0;32m[CHECK] \"{0}\"已通过字符完整性检查\033[0m'.format(s[3]))
 
@@ -1445,42 +1456,42 @@ def assFontChange(fullass: list, newfont_name: dict, asspath: str, styleline: in
   newasspath: 新ass文件的绝对路径
     """
     # 扫描Style各行，并替换掉字体名称
-    # print('正在替换style对应字体......')
-    for i in range(styleline + 2, len(fullass)):
-        if len(fullass[i].split(':')) < 2:
-            continue
-        if fullass[i].split(':')[0].strip(' ').lower() != 'style':
-            break
-        styleStr2 = fullass[i].split(':')
-        styleStr = ''.join(styleStr2[1:]).split(',')
-        fontstr = styleStr[font_pos].strip(' ').lstrip('@')
-        if not newfont_name.get(fontstr) is None:
-            if not newfont_name[fontstr][1] is None:
-                styleStr[font_pos] = styleStr[font_pos].replace(fontstr, newfont_name[fontstr][1])
-                fullass[i] = styleStr2[0] + ':' + ','.join(styleStr)
-
-    used_nf_name2 = {}
-    for k2 in [k for k in newfont_name.keys() if not newfont_name[k][1] is None]:
-        used_nf_name2[k2] = newfont_name[k2]
-    used_nf_name = {list(used_nf_name2.keys())[0].upper(): used_nf_name2[list(used_nf_name2.keys())[0]]}
-    for k in used_nf_name2.keys():
-        used_nf_name[k.upper()] = used_nf_name2[k]
-    if len(fn_lines) > 0:
-        # print('正在处理fn标签......')
-        for fl in fn_lines:
-            fn_line = ','.join(fullass[fl[0]].split(',')[text_pos:])
-            for ti in range(1, len(fl)):
-                for k in fl[ti].keys():
-                    fname = fl[ti][k][0]
-                    if len(fname) > 0 and not used_nf_name[fname.upper()][1] is None:
-                        fn_line = fn_line.replace(k, k.replace(fname, used_nf_name[fname.upper()][1]))
-            fn_line = ','.join(fullass[fl[0]].split(',')[:text_pos] + [fn_line])
-            fullass[fl[0]] = fn_line
-    for k in used_nf_name2:
-        fullass.insert(infoline + 1, '; Font Subset: {1} - {0}\n'.format(k, newfont_name[k][1]))
-    if len(used_nf_name2) > 0:
-        fullass.insert(infoline + 1, '; Subset via ASFMKV_py (with fontTools)\n')
-    del used_nf_name, used_nf_name2
+    if len(newfont_name) > 0: 
+        # print('正在替换style对应字体......')
+        for i in range(styleline + 2, len(fullass)):
+            if len(fullass[i].split(':')) < 2:
+                continue
+            if fullass[i].split(':')[0].strip(' ').lower() != 'style':
+                break
+            styleStr2 = fullass[i].split(':')
+            styleStr = ''.join(styleStr2[1:]).split(',')
+            fontstr = styleStr[font_pos].strip(' ').lstrip('@')
+            if not newfont_name.get(fontstr) is None:
+                if not newfont_name[fontstr][1] is None:
+                    styleStr[font_pos] = styleStr[font_pos].replace(fontstr, newfont_name[fontstr][1])
+                    fullass[i] = styleStr2[0] + ':' + ','.join(styleStr)
+        used_nf_name2 = {}
+        for k2 in [k for k in newfont_name.keys() if not newfont_name[k][1] is None]:
+            used_nf_name2[k2] = newfont_name[k2]
+        used_nf_name = {list(used_nf_name2.keys())[0].upper(): used_nf_name2[list(used_nf_name2.keys())[0]]}
+        for k in used_nf_name2.keys():
+            used_nf_name[k.upper()] = used_nf_name2[k]
+        if len(fn_lines) > 0:
+            # print('正在处理fn标签......')
+            for fl in fn_lines:
+                fn_line = ','.join(fullass[fl[0]].split(',')[text_pos:])
+                for ti in range(1, len(fl)):
+                    for k in fl[ti].keys():
+                        fname = fl[ti][k][0]
+                        if len(fname) > 0 and not used_nf_name[fname.upper()][1] is None:
+                            fn_line = fn_line.replace(k, k.replace(fname, used_nf_name[fname.upper()][1]))
+                fn_line = ','.join(fullass[fl[0]].split(',')[:text_pos] + [fn_line])
+                fullass[fl[0]] = fn_line
+        for k in used_nf_name2:
+            fullass.insert(infoline + 1, '; Font Subset: {1} - {0}\n'.format(k, newfont_name[k][1]))
+        if len(used_nf_name2) > 0:
+            fullass.insert(infoline + 1, '; Subset via ASFMKV_py (with fontTools)\n')
+        del used_nf_name, used_nf_name2
     if path.exists(path.dirname(outdir)):
         if not path.isdir(outdir):
             try:
@@ -2164,7 +2175,7 @@ def cListAssFont(font_info):
 [2] 拷贝所需字体: \033[1;33m{1}\033[0m
 [3] 搜索子目录(字幕): \033[1;33m{2}\033[0m
 [4] 使用工作目录字体：\033[1;33m{3}\033[0m
-[5] 显示具体缺字文件: \033[1;33m{4}\033[0m
+[5] 显示缺少字体的字幕: \033[1;33m{4}\033[0m
 [6] 显示字体缺字数(慢): \033[1;33m{5}\033[0m
 '''.format(resultw, copyfont, s_subdir, fontload, exact_lost, char_lost))
         work = os.system('choice /M 请输入 /C AB123456L')
@@ -2302,13 +2313,18 @@ def cListAssFont(font_info):
                             if resultw:
                                 print('{0} <{1}>{2}'.format(assfont[s][2], path.basename(fn), ann), file=wfile)
                             if errshow:
-                                print(
-                                    '\033[1;32m[{3}]\033[0m \033[1;36m{0}\033[0m \033[1m<{1}>\033[1;31m{2}\033[0m'.format(
-                                        assfont[s][2],
-                                        path.basename(fn), ann, str(len(assfont[s][0])).rjust(maxnum)))
+                                if char_lost:
+                                    print('\033[1;32m[{3}\033[0m-\033[1;31m{4}\033[1;32m]\033[0m \033[1;36m{0}\033[0m \033[1m<{1}>\033[1;31m{2}\033[0m'.format(
+                                        assfont[s][2], path.basename(fn), ann, str(len(assfont[s][0])).rjust(maxnum), str(out_of_ranges.get(s, 0)).ljust(maxnum)))
+                                else:
+                                    print('\033[1;32m[{3}]\033[0m \033[1;36m{0}\033[0m \033[1m<{1}>\033[1;31m{2}\033[0m'.format(
+                                        assfont[s][2], path.basename(fn), ann, str(len(assfont[s][0])).rjust(maxnum)))
                             else:
-                                print(
-                                    '\033[1;32m[{3}\033[0m-\033[1;31m{4}\033[1;32m]\033[0m \033[1;36m{0}\033[0m \033[1m<{1}>\033[1;32m{2}\033[0m'
+                                if char_lost:
+                                    print('\033[1;32m[{3}\033[0m-\033[1;31m{4}\033[1;32m]\033[0m \033[1;36m{0}\033[0m \033[1m<{1}>\033[1;32m{2}\033[0m'
+                                    .format(assfont[s][2], path.basename(fn), ann, str(len(assfont[s][0])).rjust(maxnum), str(out_of_ranges.get(s, 0)).ljust(maxnum)))
+                                else:
+                                    print('\033[1;32m[{3}]\033[0m \033[1;36m{0}\033[0m \033[1m<{1}>\033[1;32m{2}\033[0m'
                                     .format(assfont[s][2], path.basename(fn), ann, str(len(assfont[s][0])).rjust(maxnum), str(out_of_ranges.get(s, 0)).ljust(maxnum)))
                             # print(assfont[s][0])
                         else:
@@ -2317,8 +2333,10 @@ def cListAssFont(font_info):
                                 if exact_lost:
                                     for f in assfont[s][3]:
                                         print('{0}\"{1}\"'.format(''.center(4, ' '), f), file=wfile)
-                            print('\033[1;31m[{1}]\033[1;36m {0}\033[1;31m - No Found\033[0m'
+                            if char_lost: print('\033[1;31m[{1}]\033[1;36m {0}\033[1;31m - No Found\033[0m'
                                 .format(ssp[0],'N'.center(maxnum*2+1,'N')))
+                            else: print('\033[1;31m[{1}]\033[1;36m {0}\033[1;31m - No Found\033[0m'
+                                .format(ssp[0],'N'.center(maxnum,'N')))
                             if exact_lost:
                                 for f in assfont[s][3]:
                                     print('{0}\"\033[1;31m{1}\033[0m\"'.format(''.center(maxnum, ' '), f))
@@ -2399,7 +2417,7 @@ def showMessageSubset(newasspaths: list, newfont_name: dict):
 
 def cFontSubset(font_info):
     global extlist, v_subdir, s_subdir, rmAssIn, rmAttach, fontload, \
-        mkvout, assout, fontout, matchStrict, no_mkvm, notfont, warningStop, errorStop
+        mkvout, assout, fontout, matchStrict, no_mkvm, notfont, warningStop, errorStop, ignoreLost
     leave = True
     while leave:
         cls()
@@ -2419,12 +2437,13 @@ def cFontSubset(font_info):
 [8] 媒体文件输出文件夹: \033[1;33m{4}\033[0m
 [9] 字幕文件输出文件夹: \033[1;33m{5}\033[0m
 [0] 字体文件输出文件夹: \033[1;33m{6}\033[0m
-[X] 旧格式字体中断: \033[1;33m{9}\033[0m
+[W] 旧格式字体中断: \033[1;33m{9}\033[0m
+[X] 忽略字体所缺字: \033[1;33m{12}\033[0m
 [Y] 子集化失败中断: \033[1;33m{10}\033[0m
 [Z] 使用工作目录字体: \033[1;33m{11}\033[0m
 '''.format(v_subdir, s_subdir, rmAssIn, rmAttach, mkvout, assout,
-           fontout, matchStrict, notfont, warningStop, errorStop, fontload))
-        work = os.system('choice /M 请输入 /C AB1234567890XYZL')
+           fontout, matchStrict, notfont, warningStop, errorStop, fontload, ignoreLost))
+        work = os.system('choice /M 请输入 /C AB1234567890WXYZL')
         if work == 2 and no_mkvm:
             print('[ERROR] 在您的系统中找不到 mkvmerge, 该功能不可用')
             work = -1
@@ -2438,9 +2457,10 @@ def cFontSubset(font_info):
 字幕文件输出文件夹: \033[1;33m{3}\033[0m
 字体文件输出文件夹: \033[1;33m{4}\033[0m
 旧格式字体中断: \033[1;33m{5}\033[0m
+忽略字体所缺字: \033[1;33m{8}\033[0m
 子集化失败中断: \033[1;33m{6}\033[0m
 使用工作目录字体：\033[1;33m{7}\033[0m
-'''.format(v_subdir, s_subdir, matchStrict, assout, fontout, warningStop, warningStop, fontload))
+'''.format(v_subdir, s_subdir, matchStrict, assout, fontout, warningStop, errorStop, fontload, ignoreLost))
             else:
                 print('''子集化字体并封装
 搜索子目录(视频): \033[1;33m{4}\033[0m
@@ -2451,9 +2471,10 @@ def cFontSubset(font_info):
 严格字幕匹配: \033[1;33m{6}\033[0m
 媒体文件输出文件夹: \033[1;33m{3}\033[0m
 旧格式字体中断: \033[1;33m{8}\033[0m
+忽略字体所缺字: \033[1;33m{10}\033[0m
 子集化失败中断: \033[1;33m{7}\033[0m
 使用工作目录字体：\033[1;33m{9}\033[0m
-'''.format(rmAssIn, rmAttach, notfont, mkvout, v_subdir, s_subdir, matchStrict, errorStop, warningStop, fontload))
+'''.format(rmAssIn, rmAttach, notfont, mkvout, v_subdir, s_subdir, matchStrict, errorStop, warningStop, fontload, ignoreLost))
             cpath = ''
             directout = False
             subonly = False
@@ -2631,11 +2652,16 @@ def cFontSubset(font_info):
             else:
                 warningStop = True
         elif work == 14:
+            if ignoreLost:
+                ignoreLost = False
+            else:
+                ignoreLost = True
+        elif work == 15:
             if errorStop:
                 errorStop = False
             else:
                 errorStop = True
-        elif work == 15:
+        elif work == 16:
             if not o_fontload:
                 if fontload:
                     fontload = False
@@ -2890,7 +2916,7 @@ def loadMain(reload: bool = False):
 [M] 字幕-视频名称匹配
 [S] 搜索字体
 [C] 检视重复字体: 重复名称[\033[1;33m{1}\033[0m]
-[W] 检视旧格式字体（可能无法子集化）: [\033[1;33m{3}\033[0m]
+[W] 检视旧格式字体: 名称[\033[1;33m{3}\033[0m]
 其他:
 [R] 重载字体列表
 [D] 依赖与许可证
