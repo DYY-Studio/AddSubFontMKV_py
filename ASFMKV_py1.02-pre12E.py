@@ -1261,7 +1261,7 @@ def charExistCheck(font_path: str, font_number: int, toCheck: str):
                 tf.close()
                 return '', {}, ''
             # fontTools默认返回GB2312，但是GB2312范围太小，如"·"是无法解码的，这里替换为GBK来解决这一问题
-            if tcoding.lower() == 'gb2312': tcoding = 'gbk'
+            if tcoding.lower() in ['gb2312', 'x_mac_simp_chinese_ttx']: tcoding = 'gbk'
             print('\n\033[1;33m[Warning] 正在使用地区编码\033[0m\"{0}\"\033[1;33m读取CMAP映射表\033[0m'.format(tcoding))
             for c in toCheck:
                 dec = 0
