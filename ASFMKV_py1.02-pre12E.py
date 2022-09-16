@@ -354,10 +354,13 @@ ASS分析部分
                 styleStr[font_pos] = font_key
                 fullass[i] = fullass[i].split(':')[0] + ': ' + ','.join(styleStr)
         # 获取样式行中的粗体斜体信息
-        isItalic = - int(styleStr[italic_pos])
-        isBold = - int(styleStr[bold_pos])
-        fontlist.setdefault('{0}?{1}?{2}'.format(font_key, isItalic, isBold), '')
-        style_font[styleStr[style_pos]] = '{0}?{1}?{2}'.format(font_key, isItalic, isBold)
+        if len(font_key) > 0:
+            isItalic = - int(styleStr[italic_pos])
+            isBold = - int(styleStr[bold_pos])
+            fontlist.setdefault('{0}?{1}?{2}'.format(font_key, isItalic, isBold), '')
+            style_font[styleStr[style_pos]] = '{0}?{1}?{2}'.format(font_key, isItalic, isBold)
+        else:
+            print('\033[1;33m[WANRING] 样式\033[0m\"{0}\"\033[1;33m没有设置字体!\033[0m'.format(styleStr[0]))
 
     # print(fontlist)
 
@@ -510,14 +513,13 @@ ASS分析部分
                 s = eventftext[(it[0] + 1):(it[1] - 1)]
                 cuttext = eventftext[it[0]:]
                 fnpos = eventftext2.find(cuttext)
-                itl = itl[1:]
                 if len(itl) > 0:
-                    itpos = eventftext.find(itl[0])
                     newstrl[-1][0] = newstrl[-1][0][:itpos]
                 else:
                     newstrl[-1][0] = newstrl[-1][0][:it[0]]
                 newstrl.append([cuttext, fnpos, s])
                 eventftext = eventftext[it[0]:]
+                itl = itl[1:]
             newstrl = [nst for nst in newstrl if len(nst[0].strip(' ')) > 0]
             # 然后将新增的字体所对应的文本添加到fn_line中
             fn = ''
@@ -673,6 +675,13 @@ def getFileList(customPath: list = [], font_name: dict = {}, noreg: bool = False
 
 charEx = re.compile(r'[\U00020000-\U0003134F\u3400-\u4DBF\u2070-\u2BFF\u02B0-\u02FF\uE000-\uF8FF\u0080-\u00B1\u00B4-\u00BF]')
 def fnReadCheck(ttFont: ttLib.TTFont, index: int, fontpath: str):
+    """
+修正字体内部名称解码错误
+
+现在包含两种方式:
+    快速乱码检查 >> 从字体Name表中寻找可能的其它文本编码 >> 找不到就用chardet尝试修复
+    解码错误 >> fnReadCorrect尝试修复
+    """
     global charEx
     indexs = len(ttFont['name'].names)
     name = ttFont['name'].names[index]
@@ -994,7 +1003,7 @@ def fnGetFromFamilyName(font_family: dict, fn: str, isitalic: int, isbold: int) 
         return fn
 
 
-def checkAssFont(fontlist: dict, font_info: list, fn_lines: list = [], onlycheck: bool = False, checkf : str = ''):
+def checkAssFont(fontlist: dict, font_info: list, fn_lines: list = [], onlycheck: bool = False, checkf: str = ''):
     """
 系统字体完整性检查，检查是否有ASS所需的全部字体，如果没有，则要求拖入
 
@@ -1199,17 +1208,39 @@ def getNameStr(name, subfontcrc: str) -> str:
 
 
 def charExistCheck(font_path: str, font_number: int, toCheck: str):
+    '''
+字符存在检查
+
+通过字体内的CMAP，即文本编码(Textcoding)到字形(Glyph)映射表确认字体中是否有所需字形
+分为 Unicode CMAP 和 ANSI CMAP 两部分
+
+需要以下输入:
+    font_path       字体绝对路径
+    font_number     字体索引（针对TTC/OTC文件）
+    toCheck         需要检查的字符串
+
+将会返回以下:
+    gfs             字符对应的Glyph-name
+    gfs_uni         ANSI到Unicode对应词典（如果是ANSI CMAP）
+    out_of_range    字体中缺少的字符
+    '''
     gfs = ''
     gfs_uni = {}
     tf = ttLib.TTFont(font_path, fontNumber=int(font_number), lazy=True)
     cmap = {}
+    toCheck = re.sub(r'[\u007F]', '', toCheck)
     out_of_range = ''
+    # 有部分字体的Format12表格fontTools读不出来，所以先Try，如果不行就直接退出
     try:
         for c in tf['cmap'].tables:
             if c.isUnicode() and len(c.cmap) > len(cmap):
                 cmap = c.cmap
     except:
-        return '', {}, ''
+        tf.close()
+        return 'textInput', {'textInput': True}, ''
+    # 如果第一步的Try中获取到了Unicode CMAP，则直接处理 Unicode CMAP
+    # 处理非常简单: 将字符转换为 Unicode 编码对应的十进制数 (ord)，然后在词典里查找即可
+    # 如果词典里没有，就是没有
     if len(cmap) > 0:
         for c in toCheck:
             dec = ord(c)
@@ -1218,21 +1249,31 @@ def charExistCheck(font_path: str, font_number: int, toCheck: str):
             else:
                 gfs = ','.join([gfs, cmap.get(dec)])
     else:
+        # 如果没找到 Unicode CMAP，那就找 ANSI CMAP
         if len(tf['cmap'].tables) > 0:
             tcoding = ''
             for t in tf['cmap'].tables:
                 if len(t.cmap) > len(cmap):
                     cmap = t.cmap
                     tcoding = t.getEncoding()
+            # 如果这也找不到，那就退
+            if len(cmap) == 0:
+                tf.close()
+                return '', {}, ''
+            # fontTools默认返回GB2312，但是GB2312范围太小，如"·"是无法解码的，这里替换为GBK来解决这一问题
             if tcoding.lower() == 'gb2312': tcoding = 'gbk'
             print('\n\033[1;33m[Warning] 正在使用地区编码\033[0m\"{0}\"\033[1;33m读取CMAP映射表\033[0m'.format(tcoding))
             for c in toCheck:
                 dec = 0
+                # 无论是哪个文本编码，0-127都是与ASCII相同的，所以直接ord就行了
                 if re.match(r'[\u0000-\u007F]', c):
                     dec = ord(c)
                 else:
+                    # 如果是超出 ASCII 字符范围的，则将其用对应编码encode，然后将得到的 bytes 转换为十六进制，再转为十进制
                     dec = int(''.join([hex(h).lstrip('0x') for h in c.encode(tcoding)]), 16)
                 if dec >= 0:
+                    # 如果找到，比Unicode会多创建一个词典 gfs_uni，里面是 本地文本编码十进制 到 Unicode十进制 的对应关系
+                    # 以便之后修复CMAP时使用
                     if cmap.get(dec) is None:
                         out_of_range = out_of_range + c
                     else:
@@ -1304,12 +1345,22 @@ def assFontSubset(assfont: dict, fontdir: str, font_info: list):
         if len(gfs) == 0:
             print('\n\033[1;31m[WARNING] 没有要子集化的字符\033[0m')
             continue
+
+
+        subsetarg = None
+        if gfs_uni.get('textInput', False):
+            print('\n\033[1;31m[WARNING] 字符缺失检查失败，将会使用传统方式进行子集化\033[0m')
+            subsetarg = [s[0], '--text={0}'.format(s[2]), '--output-file={0}'.format(subfontpath),
+                     '--font-number={0}'.format(s[1]), '--passthrough-tables', '--name-legacy', '--legacy-cmap', '--glyph-names']
+            if ignoreLost:
+                subsetarg = subsetarg + ['--ignore-missing-unicodes']
+            gfs_uni.clear()
+        else:
+            subsetarg = [s[0], '--glyphs={0}'.format(gfs), '--output-file={0}'.format(subfontpath),
+                     '--font-number={0}'.format(s[1]), '--passthrough-tables', '--name-legacy', '--legacy-cmap', '--glyph-names']
         # else:
         #     print('\n\033[0;32m[CHECK] \"{0}\"已通过字符完整性检查\033[0m'.format(s[3]))
 
-
-        subsetarg = [s[0], '--glyphs={0}'.format(gfs), '--output-file={0}'.format(subfontpath),
-                     '--font-number={0}'.format(s[1]), '--passthrough-tables', '--name-legacy', '--legacy-cmap', '--glyph-names']
         try:
             subset.main(subsetarg)
         except PermissionError:
@@ -1711,6 +1762,9 @@ def nameMatchingProgress(medias: list, mStart: int, mEnd: str, sStart: int, sEnd
   sStart: 字幕文件剧集开始位置
   sEnd: 字幕文件剧集结束字符
   subs: 字幕文件列表
+
+将会返回以下
+  media_ass: 媒体文件与字幕文件对应词典
     """
     media_ass = {}
     for m in medias:
@@ -2261,7 +2315,7 @@ def cListAssFont(font_info):
                         font_info2 = font_info
                     a, fontlist, b, c, d, g, h = assAnalyze(cpath, fontlist, onlycheck=True)
                     del a, b, c, d, g, h
-                    assfont2, font_info2 = checkAssFont(fontlist, font_info2, onlycheck=True, checkf=f)
+                    assfont2, font_info2 = checkAssFont(fontlist, font_info2, onlycheck=True, checkf=cpath)
                     assfont = updateAssFont(assfont, assfont2)
                     del assfont2
                     fd = path.join(path.dirname(cpath), 'Fonts')
@@ -2277,7 +2331,7 @@ def cListAssFont(font_info):
                     maxnum = 0
                     out_of_ranges = {}
                     if char_lost:
-                        print('\033[1;33m检查字体缺字情况，请稍等…\033[0m')
+                        print('\033[1;33m检查字体缺字情况，请稍等...\033[0m')
                     for s in assfont.keys():
                         ssp = s.split('?')
                         if not ssp[0] == ssp[1]:
@@ -2285,12 +2339,15 @@ def cListAssFont(font_info):
                             if lx > maxnum:
                                 maxnum = lx
                             if char_lost:
+                                print('\033[1;33m正在检查:\033[0m \033[1m{0}\033[0m'.format(assfont[s][1]))
                                 a, b, out_of_range = charExistCheck(ssp[0], int(ssp[1]), assfont[s][0])
                                 if len(out_of_range) > 0:
-                                    out_of_ranges[s] = len(out_of_range)
+                                    out_of_ranges[s] = [str(len(out_of_range)), out_of_range.strip(' ')]
                                 elif len(a) == 0:
-                                    out_of_ranges[s] = 'N'
+                                    print('\033[1;31m检查失败:\033[0m \033[1m{0}\033[0m'.format(assfont[s][1]))
+                                    out_of_ranges[s] = ['N', '']
                                 del a, b, out_of_range
+                    print('')
                     maxnum = len(str(maxnum))
                     for s in assfont.keys():
                         ssp = s.split('?')
@@ -2312,20 +2369,29 @@ def cListAssFont(font_info):
                                     errshow = True
                             if resultw:
                                 print('{0} <{1}>{2}'.format(assfont[s][2], path.basename(fn), ann), file=wfile)
+                                if not out_of_ranges.get(s) is None:
+                                    if out_of_ranges[s][0] != 'N':
+                                        print('{0}{2} chars no found: {1}'.format(''.center(maxnum, ' '), out_of_ranges[s][1], out_of_ranges[s][0]), file=wfile)
                             if errshow:
                                 if char_lost:
                                     print('\033[1;32m[{3}\033[0m-\033[1;31m{4}\033[1;32m]\033[0m \033[1;36m{0}\033[0m \033[1m<{1}>\033[1;31m{2}\033[0m'.format(
-                                        assfont[s][2], path.basename(fn), ann, str(len(assfont[s][0])).rjust(maxnum), str(out_of_ranges.get(s, 0)).ljust(maxnum)))
+                                        assfont[s][2], path.basename(fn), ann, str(len(assfont[s][0])).rjust(maxnum), out_of_ranges.get(s, ['0'])[0].ljust(maxnum)))
+                                    if not out_of_ranges.get(s) is None:
+                                        if out_of_ranges[s][0] != 'N':
+                                            print('{0}[ \033[1;31m{1}\033[0m ]'.format(''.center(maxnum*2+3, ' '), out_of_ranges[s][1]))
                                 else:
                                     print('\033[1;32m[{3}]\033[0m \033[1;36m{0}\033[0m \033[1m<{1}>\033[1;31m{2}\033[0m'.format(
                                         assfont[s][2], path.basename(fn), ann, str(len(assfont[s][0])).rjust(maxnum)))
                             else:
                                 if char_lost:
                                     print('\033[1;32m[{3}\033[0m-\033[1;31m{4}\033[1;32m]\033[0m \033[1;36m{0}\033[0m \033[1m<{1}>\033[1;32m{2}\033[0m'
-                                    .format(assfont[s][2], path.basename(fn), ann, str(len(assfont[s][0])).rjust(maxnum), str(out_of_ranges.get(s, 0)).ljust(maxnum)))
+                                    .format(assfont[s][2], path.basename(fn), ann, str(len(assfont[s][0])).rjust(maxnum), out_of_ranges.get(s, ['0'])[0].ljust(maxnum)))
+                                    if not out_of_ranges.get(s) is None:
+                                        if out_of_ranges[s][0] != 'N':
+                                            print('{0}[ \033[1;31m{1}\033[0m ]'.format(''.center(maxnum*2+3, ' '), out_of_ranges[s][1]))
                                 else:
                                     print('\033[1;32m[{3}]\033[0m \033[1;36m{0}\033[0m \033[1m<{1}>\033[1;32m{2}\033[0m'
-                                    .format(assfont[s][2], path.basename(fn), ann, str(len(assfont[s][0])).rjust(maxnum), str(out_of_ranges.get(s, 0)).ljust(maxnum)))
+                                    .format(assfont[s][2], path.basename(fn), ann, str(len(assfont[s][0])).rjust(maxnum), out_of_ranges.get(s, ['0'])[0].ljust(maxnum)))
                             # print(assfont[s][0])
                         else:
                             if resultw:
@@ -2333,7 +2399,8 @@ def cListAssFont(font_info):
                                 if exact_lost:
                                     for f in assfont[s][3]:
                                         print('{0}\"{1}\"'.format(''.center(4, ' '), f), file=wfile)
-                            if char_lost: print('\033[1;31m[{1}]\033[1;36m {0}\033[1;31m - No Found\033[0m'
+                            if char_lost: 
+                                print('\033[1;31m[{1}]\033[1;36m {0}\033[1;31m - No Found\033[0m'
                                 .format(ssp[0],'N'.center(maxnum*2+1,'N')))
                             else: print('\033[1;31m[{1}]\033[1;36m {0}\033[1;31m - No Found\033[0m'
                                 .format(ssp[0],'N'.center(maxnum,'N')))
