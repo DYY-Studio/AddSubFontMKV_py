@@ -505,14 +505,13 @@ ASS分析部分
                 s = eventftext[(it[0] + 1):(it[1] - 1)]
                 cuttext = eventftext[it[0]:]
                 fnpos = eventftext2.find(cuttext)
-                itl = itl[1:]
                 if len(itl) > 0:
-                    itpos = eventftext.find(itl[0])
                     newstrl[-1][0] = newstrl[-1][0][:itpos]
                 else:
                     newstrl[-1][0] = newstrl[-1][0][:it[0]]
                 newstrl.append([cuttext, fnpos, s])
                 eventftext = eventftext[it[0]:]
+                itl = itl[1:]
             newstrl = [nst for nst in newstrl if len(nst[0].strip(' ')) > 0]
             # 然后将新增的字体所对应的文本添加到fn_line中
             fn = ''
