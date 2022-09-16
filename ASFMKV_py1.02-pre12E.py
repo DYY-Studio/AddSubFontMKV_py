@@ -2839,7 +2839,7 @@ def cSVMatching():
 no_mkvm = False
 no_cmdc = False
 mkvmv = ''
-font_info = [{}, {}, {}, []]
+font_info = [{}, {}, {}, {}]
 
 
 # font_info 列表结构
@@ -2968,7 +2968,7 @@ def loadMain(reload: bool = False):
         if not o_fontload:
             dupfont = {}
             font_list, font_name = getFileList(fontin)
-            font_info = fontProgress(font_list, [font_name, {}, {}, []])
+            font_info = fontProgress(font_list, [font_name, {}, {}, {}])
             del font_name
     # elif work == 6:
     #     cls()
