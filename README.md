@@ -67,7 +67,7 @@
 #### [Python](https://www.python.org/downloads/windows/)
 #### 运行库
 * CLI版本: `pip3 install chardet fontTools colorama --upgrade`
-* GUI版本: `pip3 install chardet fontTools PyQt5 --upgrade`
+* GUI版本: `pip3 install chardet fontTools colorama PyQt5 --upgrade`
 
 #### [mkvmerge](https://mkvtoolnix.download/) (可选)
 
