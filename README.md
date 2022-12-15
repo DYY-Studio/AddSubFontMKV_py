@@ -55,9 +55,11 @@
 
 ## 能干什么？
 * 字体查重（借由**fontTools**实现，谢谢。）
-* ASS/SSA 依赖字体确认（前辈的**ListAssFont**这个名字真的非常好概括这个功能）
+* ASS/SSA 依赖字体确认
 * 字体子集化（借由**fontTools**实现，谢谢。字体命名上参考了现有的子集化程序。）
 * 字幕字体批量封装到Matroska（借由**mkvmerge**实现，谢谢）
+* 字幕-视频文件名称匹配（**[RenameSubtitles_RE](https://github.com/DYY-Studio/RenameSubtitles_RE)** 1.1方法的改进版本）
+* ASS/SSA 批量转换为 UTF-8-BOM
 ## 安装依赖组件和程序
 #### [Python](https://www.python.org/downloads/windows/)
 #### 运行库
