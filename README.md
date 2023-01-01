@@ -15,7 +15,7 @@
 
 **尽管目前的最新版本仍然是Preview版本，但是它们都相对稳定而可靠**
 
-**您不应该使用过时的Py1.02-Pre4之前的任何版本，它们甚至不能正确分析ASS文件**
+**您不应该使用过时的Preview15之前的任何版本，它们甚至不能正确分析ASS文件**
 
 ## 目录
 | [最新更新](https://github.com/DYY-Studio/AddSubFontMKV_py#gui%E6%9C%80%E6%96%B0%E6%9B%B4%E6%96%B0) | [能干什么](https://github.com/DYY-Studio/AddSubFontMKV_py#%E8%83%BD%E5%B9%B2%E4%BB%80%E4%B9%88) | [运行环境](https://github.com/DYY-Studio/AddSubFontMKV_py#%E5%AE%89%E8%A3%85%E4%BE%9D%E8%B5%96%E7%BB%84%E4%BB%B6%E5%92%8C%E7%A8%8B%E5%BA%8F) | [功能介绍](https://github.com/DYY-Studio/AddSubFontMKV_py#%E5%8A%9F%E8%83%BD%E4%BB%8B%E7%BB%8D) | [自定义变量](https://github.com/DYY-Studio/AddSubFontMKV_py#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E9%87%8F)
@@ -35,6 +35,7 @@
 但是2023，只要有BUG，我火速赶来。祝各位新年快乐。
 
 ## GUI图形化版本更新
+**注意: GUI版本目前仍未修复Preview14及之后的修复内容，暂不推荐使用**
 ### PyQt Beta2 (实验性)
 * 更新了 Py1.02 Preview10 中修复的内容
 * 添加了目录选择窗口
@@ -47,6 +48,7 @@
 * **重要：修复了单行多fn标签时fn标签切割错误的问题**
 ## CLI命令行版本更新
 ### Preview 15
+**特别重要更新**
 * 现已支持`\r`特效重置标签
 * 现已支持单特效块内的多个同类特效标签
 * 特效标签定位由右搜索
