@@ -18,6 +18,7 @@
 **您不应该使用过时的Preview15之前的任何版本，它们甚至不能正确分析ASS文件**
 
 ## 目录
+**新版本在Release，仓库还没得空整理暂时不放**
 | [最新更新](https://github.com/DYY-Studio/AddSubFontMKV_py#gui%E6%9C%80%E6%96%B0%E6%9B%B4%E6%96%B0) | [能干什么](https://github.com/DYY-Studio/AddSubFontMKV_py#%E8%83%BD%E5%B9%B2%E4%BB%80%E4%B9%88) | [运行环境](https://github.com/DYY-Studio/AddSubFontMKV_py#%E5%AE%89%E8%A3%85%E4%BE%9D%E8%B5%96%E7%BB%84%E4%BB%B6%E5%92%8C%E7%A8%8B%E5%BA%8F) | [功能介绍](https://github.com/DYY-Studio/AddSubFontMKV_py#%E5%8A%9F%E8%83%BD%E4%BB%8B%E7%BB%8D) | [自定义变量](https://github.com/DYY-Studio/AddSubFontMKV_py#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E9%87%8F)
 | --- | --- | --- | --- | --- |
 
@@ -48,10 +49,18 @@
 * **重要：修复了单行多fn标签时fn标签切割错误的问题**
 ## CLI命令行版本更新
 ### Preview 15
+***特别重要更新***
+#### Fix 3
+- 修复了同时使用 **微软雅黑** 和 **微软雅黑 Bold** 时，子集化后只保留其中之一的问题 (#22)
+#### Fix 2
+- 在原有的事无巨细的列表下添加了“概览” (#21)
+- 会显示字幕读取的两个步骤了，让用户更清晰的知道字幕读取缓慢是卡在哪
+- 会显示读取的字幕的文本编码了
+- 处理使用字幕中未定义样式的文本行时不再崩溃 (#22)
+- 未设定sublang时不再载入mkvmerge的语言代码列表（以后完善sublang功能再说吧）
 #### Fix 1
 * 修复了重载字体后ASS中的单一字体多名称分家的问题
 #### Release
-**特别重要更新**
 * 现已支持`\r`特效重置标签
 * 现已支持单特效块内的多个同类特效标签
 * 特效标签定位由右搜索
