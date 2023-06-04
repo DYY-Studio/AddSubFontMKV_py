@@ -19,12 +19,8 @@
 
 ## 目录
 **新版本在Release，仓库还没得空整理暂时不放**
-| [最新更新](#CLI命令行版本更新) | [能干什么](#%E8%83%BD%E5%B9%B2%E4%BB%80%E4%B9%88) | [运行环境](#%E5%AE%89%E8%A3%85%E4%BE%9D%E8%B5%96%E7%BB%84%E4%BB%B6%E5%92%8C%E7%A8%8B%E5%BA%8F) | [功能介绍](#%E5%8A%9F%E8%83%BD%E4%BB%8B%E7%BB%8D) | [自定义变量](#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E9%87%8F) | [字体信息缓存](#字体信息缓存)
-| --- | --- | --- | --- | --- | --- |
-
-## 正在进行
-* `sublangs`语言列表本地化（依赖项目: [pycountry](https://github.com/flyingcircusio/pycountry)(LGPL-2.1)）
-* ffmpeg封装支持
+| [最新更新](#CLI命令行版本更新) | [能干什么](#%E8%83%BD%E5%B9%B2%E4%BB%80%E4%B9%88) | [运行环境](#%E5%AE%89%E8%A3%85%E4%BE%9D%E8%B5%96%E7%BB%84%E4%BB%B6%E5%92%8C%E7%A8%8B%E5%BA%8F) | [功能介绍](#%E5%8A%9F%E8%83%BD%E4%BB%8B%E7%BB%8D) | [自定义变量](#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E9%87%8F) | [字体信息缓存](#字体信息缓存) | [sublangs本地化](sublangs本地化)
+| --- | --- | --- | --- | --- | --- | --- |
 
 ## 版本前瞻（画大饼）
 * PyQt Beta3版本
@@ -107,7 +103,7 @@ ASFMKV的传统功能以及字体子集化功能
 字体会在 `Fonts` 下的以各视频文件匹配到的第一个字幕的文件名作为名称文件夹下
 
 字幕会带有`.subset`标注
-### [B] 子集化并封装
+### [B/C] 子集化并封装
 需要用户输入有外挂字幕的视频文件的路径或其所在目录
 
 会自动完成封装流程，并删除子集化的字体和修改过的字幕
@@ -115,6 +111,20 @@ ASFMKV的传统功能以及字体子集化功能
 默认情况下输出到源文件夹，文件名加有 `.muxed`
 
 **也可以把 notfont 设置为 True，只封装字幕，不封装字体，不进行子集化**
+> mkvmerge
+
+传统的使用mkvmerge封装，经过大量测试，比较稳定
+
+需要 `mkvmerge.exe` 在`path`系统变量中的路径下或与ASFMKVpy在同一目录
+> FFmpeg
+
+**Preview 18**新增的使用ffmpeg进行MKV封装，测试较少，仅保证部分情况正常使用
+
+默认用于没有mkvmerge的环境，并且由于ffmpeg的元数据写入方式，同时需要ffprobe支持
+
+需要您的ffmpeg版本较新，支持`-attach`，建议使用5.0以上版本
+
+需要 `ffmpeg.exe`和`ffprobe.exe` 在`path`系统变量中的路径下或与ASFMKVpy在同一目录
 
 ### sublangs教程
 在 Preview 17 中，我加入了拖了大半年的sublangs询问输入功能，在用户交互上废了很多心思
@@ -240,6 +250,28 @@ JSON文件名称即为索引，是 **目录绝对路径(转小写)再使用UTF-8
 
 **字体文件绝对路径(转小写) + 字体文件大小(Byte) + 文件变更时间(Float) 再使用 UTF-8 编码**
 
+## sublangs本地化
+从 **Preview 18** 版本开始，sublangs选择器支持ISO-639语言的本地化名称读取
+
+您需要将本地化文件放入 `%APPDATA%\ASFMKVpy\isoLang\对应语言的ISO639-1语言代码`
+
+如简体中文应将本地化文件放入 `%APPDATA%\ASFMKVpy\isoLang\zh_CN`
+
+程序在启动时，会通过即将过时的`locale.getdefaultlocale()`获取当前系统所用语言的ISO639-1语言代码
+
+在执行sublangs选择器时，程序会扫描上述文件夹寻找本地语言对应的本地化文件，如果没有子集(如zh_CN)，则寻找同一语言下的其它子集(zh、zh_Hans...)
+
+每次在Release时我都会提供一个全语言本地化压缩包，请根据自己所在地语言选择放入
+
+**提供的本地化语言包是 [language-list](https://github.com/umpirsky/language-list) 项目和 [pycountry](https://github.com/flyingcircusio/pycountry) 项目的混合**<br>
+**前者提供了ISO-639-1对应的翻译文本，而后者提供了ISO-639-2T/2B/3中对应的语言代码**<br>
+**由衷地感谢这两个项目**
+
+### 自定义本地化文件
+
+本地化JSON应遵循以下语法:
+`{"[ISO-639-1/2B/2T/3]": "[对应的本地化名称]"}`
+
 ## 未测试功能
 #### mkvout, fontout, assout
 设置为绝对路径的情况暂未测试
@@ -255,3 +287,5 @@ JSON文件名称即为索引，是 **目录绝对路径(转小写)再使用UTF-8
 ### [MKVToolNix/mkvmerge](https://mkvtoolnix.download/) (GPLv2 Licence)
 ### [chardet](https://github.com/chardet/chardet) (LGPLv2.1 Licence)
 ### [colorama](https://github.com/tartley/colorama) (BSD-3-Clause License)
+### [language-list](https://github.com/umpirsky/language-list) (MIT License)
+### [pycountry](https://github.com/flyingcircusio/pycountry) (LGPLv2.1 License)
