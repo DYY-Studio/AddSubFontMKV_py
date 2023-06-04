@@ -22,6 +22,10 @@
 | [最新更新](#CLI命令行版本更新) | [能干什么](#%E8%83%BD%E5%B9%B2%E4%BB%80%E4%B9%88) | [运行环境](#%E5%AE%89%E8%A3%85%E4%BE%9D%E8%B5%96%E7%BB%84%E4%BB%B6%E5%92%8C%E7%A8%8B%E5%BA%8F) | [功能介绍](#%E5%8A%9F%E8%83%BD%E4%BB%8B%E7%BB%8D) | [自定义变量](#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E9%87%8F) | [字体信息缓存](#字体信息缓存)
 | --- | --- | --- | --- | --- | --- |
 
+## 正在进行
+* `sublangs`语言列表本地化（依赖项目: [pycountry](https://github.com/flyingcircusio/pycountry)(LGPL-2.1)）
+* ffmpeg封装支持
+
 ## 版本前瞻（画大饼）
 * PyQt Beta3版本
 
