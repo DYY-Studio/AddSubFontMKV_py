@@ -59,6 +59,11 @@
 #### [mkvmerge](https://mkvtoolnix.download/) (可选)
 
 下载并安装/解压 MKVToolNix，将安装目录添加到系统变量path中
+#### [FFmpeg](https://ffmpeg.org/download.html)（Preview18+ 可选）
+
+下载并解压 FFmpeg与FFprobe，将可执行文件所在目录添加到系统变量path中，或直接与ASFMKVpy放置在同一目录
+
+推荐使用 FFmpeg 5.0 以上版本以避免兼容性问题
 ## 系统要求
 **Windows 7 SP1 专业版及以上，python 3.7 及以上，cmd 必须支持 choice 命令**
 
@@ -67,6 +72,7 @@
 * Windows10 21H2、21H1、20H1(2004) 及 Windows7 SP1 (已打全部补丁)
 * Python 3.9.5 / 3.8.10
 * mkvmerge v48.0.0 / v65.0.0
+* FFmpeg v5.1.2
 
 # 功能介绍
 | K | 功能 | K | 功能 |
