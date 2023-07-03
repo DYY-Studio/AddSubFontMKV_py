@@ -1,5 +1,5 @@
 # AddSubFontMKV Python Remake (ASFMKV Py)
-**Copyright(c) 2022 yyfll**
+**Copyright(c) 2022-2023 yyfll**
 
 **将您的字幕和字体通过mkvmerge快速批量封装到Matroska容器**
 
@@ -24,6 +24,7 @@
 
 ## 版本前瞻（画大饼）
 * PyQt Beta3版本
+* ini 外部配置文件支持
 
 ## GUI图形化版本更新
 **注意: GUI版本目前仍未修复Preview14及之后的修复内容，极不推荐使用**
