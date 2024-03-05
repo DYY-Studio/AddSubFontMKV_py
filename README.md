@@ -122,15 +122,13 @@ ASFMKV的传统功能以及字体子集化功能
 #### ASS/SSA内嵌
 使用ASS/SSA的“附件”功能将字体内嵌于ASS文件`[Fonts]`。
 
-| 字幕滤镜 | 兼容 
-| -- | :-: |
-| libass | ✅ |
-| XySubFilter | ❌ |
-| VSFilterMod | ✅ |
-| VSFilter | ✅ |
-| PotPlayer | ✅ |
-| MPC-HC/BE | ✅ |
-| nPlayer | ✅ |
+| 字幕滤镜 | 兼容 | 播放器内置 | 兼容 |
+| -- | :-: | -- | :-: |
+| libass | ✅ | PotPlayer | ✅ |
+| XySubFilter | ❌ | MPC-HC/BE | ✅ |
+| VSFilterMod | ✅ |  nPlayer | ✅ |
+| VSFilter | ✅ | 待测试 | - |
+
 
 #### mkvmerge
 
