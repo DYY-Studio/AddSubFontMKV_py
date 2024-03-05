@@ -1,5 +1,5 @@
 # AddSubFontMKV Python Remake (ASFMKV Py)
-**Copyright(c) 2022-2023 yyfll**
+**Copyright(c) 2022-2024 yyfll**
 
 **将您的字幕和字体通过mkvmerge快速批量封装到Matroska容器**
 
@@ -110,7 +110,7 @@ ASFMKV的传统功能以及字体子集化功能
 字体会在 `Fonts` 下的以各视频文件匹配到的第一个字幕的文件名作为名称文件夹下
 
 字幕会带有`.subset`标注
-### [B/C] 子集化并封装
+### [B/C/D] 子集化并封装
 需要用户输入有外挂字幕的视频文件的路径或其所在目录
 
 会自动完成封装流程，并删除子集化的字体和修改过的字幕
@@ -118,12 +118,26 @@ ASFMKV的传统功能以及字体子集化功能
 默认情况下输出到源文件夹，文件名加有 `.muxed`
 
 **也可以把 notfont 设置为 True，只封装字幕，不封装字体，不进行子集化**
-> mkvmerge
+
+#### ASS/SSA内嵌
+使用ASS/SSA的“附件”功能将字体内嵌于ASS文件`[Fonts]`。
+
+| 字幕滤镜 | 兼容 
+| -- | :-: |
+| libass | ✅ |
+| XySubFilter | ❌ |
+| VSFilterMod | ✅ |
+| VSFilter | ✅ |
+| PotPlayer | ✅ |
+| MPC-HC/BE | ✅ |
+| nPlayer | ✅ |
+
+#### mkvmerge
 
 传统的使用mkvmerge封装，经过大量测试，比较稳定
 
 需要 `mkvmerge.exe` 在`path`系统变量中的路径下或与ASFMKVpy在同一目录
-> FFmpeg
+#### FFmpeg
 
 **Preview 18**新增的使用ffmpeg进行MKV封装，测试较少，仅保证部分情况正常使用
 
