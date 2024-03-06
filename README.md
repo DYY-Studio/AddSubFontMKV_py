@@ -126,8 +126,8 @@ ASFMKV的传统功能以及字体子集化功能
 | -- | :-: | -- | :-: |
 | libass | ✅ | PotPlayer | ✅ |
 | XySubFilter | ❌ | MPC-HC/BE | ✅ |
-| VSFilterMod | ✅ |  nPlayer | ✅ |
-| VSFilter | ✅ | 待测试 | - |
+| VSFilterMod | ✅ | mpv  | ✅ |
+| VSFilter | ✅ | nPlayer | ✅ |
 
 
 #### mkvmerge
