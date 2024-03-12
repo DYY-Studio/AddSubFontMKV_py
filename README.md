@@ -115,6 +115,7 @@ ASFMKV的传统功能以及字体子集化功能
 | libass | ✅ | PotPlayer | ✅ |
 | XySubFilter | ❌ | MPC-HC/BE | ✅ |
 | VSFilterMod | ✅ | mpv  | ✅ |
+| xy-VSFilter | ✅ | - | - |
 | VSFilter | ✅ | nPlayer | ✅ |
 
 
@@ -214,7 +215,7 @@ DEBUG用的功能，可以在程序读取的所有字体信息中搜索字体
 ### 4 新增自定义字体目录并重载
 允许用户添加多个自定义字体目录
 
-## 高级
+# 高级
 ### 崩溃反馈
 1. 打开 命令提示行/cmd ，输入`py "脚本绝对路径"`，重复您崩溃前所做的操作<br>或 使用有断点调试功能的编辑器（如VS Code），对该脚本进行调试，重复您崩溃前所做的操作
 
@@ -239,7 +240,7 @@ DEBUG用的功能，可以在程序读取的所有字体信息中搜索字体
 | s_fontload | 加载工作目录的子目录中的字体 |
 | f_priority | 控制各字体源的优先顺序 |
 | no_extcheck | 关闭mkvmerge兼容扩展名检查 |
-## 字体信息缓存
+# 字体信息缓存
 该部分将介绍 Preview 17 版本中字体信息缓存的实现方式
 
 使用JSON配置实在是太简单了，所以缓存以JSON形式保存，在程序中则保存为一个词典
@@ -257,7 +258,7 @@ JSON文件名称即为索引，是 **目录绝对路径(转小写)再使用UTF-8
 
 **字体文件绝对路径(转小写) + 字体文件大小(Byte) + 文件变更时间(Float) 再使用 UTF-8 编码**
 
-## sublangs本地化
+# sublangs本地化
 从 **Preview 18** 版本开始，sublangs选择器支持ISO-639语言的本地化名称读取
 
 您需要将本地化文件放入 `%APPDATA%\ASFMKVpy\isoLang\对应语言的ISO639-1语言代码`
@@ -274,22 +275,22 @@ JSON文件名称即为索引，是 **目录绝对路径(转小写)再使用UTF-8
 **前者提供了ISO-639-1对应的翻译文本，而后者提供了ISO-639-2T/2B/3中对应的语言代码**<br>
 **由衷地感谢这两个项目**
 
-### 自定义本地化文件
+## 自定义本地化文件
 
 本地化JSON应遵循以下语法:
 `{"[ISO-639-1/2B/2T/3]": "[对应的本地化名称]"}`
 
-## 未测试功能
+# 未测试功能
 #### mkvout, fontout, assout
 设置为绝对路径的情况暂未测试
-## 缺点
+# 缺点
 ### 程序结构复杂
 写到后面逻辑乱了，很多可以函数化的东西被反复用了
 ### 错误易崩溃
 对错误的预防只有最低限度，一旦错了就炸了，没有Module_DEBUG的第一天……
 ### 注释不够多
 自己读起来都痛苦
-## 致谢
+# 致谢
 ### [fontTools](https://github.com/fonttools/fonttools) (MIT Licence)
 ### [MKVToolNix/mkvmerge](https://mkvtoolnix.download/) (GPLv2 Licence)
 ### [chardet](https://github.com/chardet/chardet) (LGPLv2.1 Licence)
