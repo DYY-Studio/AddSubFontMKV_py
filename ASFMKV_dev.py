@@ -158,7 +158,8 @@ subext = ['ass', 'ssa', 'srt', 'sup', 'idx']
 # 结构为：{ platformID(Decimal) : { LCID : textcoding } }
 # 目前Textcoding没有实际作用，仅用于让这个词典可读性更强
 # 详情可在 https://docs.microsoft.com/en-us/typography/opentype/spec/name#platform-encoding-and-language-ids 查询
-lcidfil = {3: {
+lcidfil = {
+3: {
     2052: 'gbk',
     1042: 'euc-kr',
     1041: 'shift-jis',
@@ -669,8 +670,6 @@ assInfo:
                     break
                 else:
                     singleLine[lineFormat[j]] = line[j]
-            if not isEvent:
-                singleLine['Fontname'] = singleLine['Fontname'].lstrip('@')
 
             if (isEvent and len(singleLine) != len(lineFormat) + 1) or (not isEvent and len(singleLine) != len(lineFormat)):
                 raise Exception(f'ASS/SSA格式错误 - 缺少逗号分隔 - 位于行{i+1} 文件\"{path.basename(assPath)}\"')
@@ -776,7 +775,7 @@ fontList: {(字体名<str>, 斜体<int>, 粗体<int>): '字符<str>'}
 
     for i in eventSplit.keys():
         for l in eventSplit[i]:
-            fn = l['Fontname']
+            fn = l['Fontname'].lstrip('@')
             l['Text'] = re.sub(r'\{.*?\\.*?\}', '', l['Text'])
             if len(assInfo['Subset']) > 0 and fn in assInfo['Subset']:
                 fn = assInfo['Subset'][fn]
@@ -1966,12 +1965,13 @@ def assFontChange(newfont_name: dict, asspath: str, assInfo: dict, splitEvents: 
             styleItalic = abs(int(assInfo['Styles'][k]['Italic']))
             styleBold = abs(int(assInfo['Styles'][k]['Bold']))
             fontstr = assInfo['Styles'][k]['Fontname']
-            nfnKey = (fontstr, styleItalic, styleBold)
+            nfnKey = (fontstr.lstrip('@'), styleItalic, styleBold)
             if newfont_name.get(nfnKey) is None:
                 continue
             else:
                 if not newfont_name[nfnKey][1] is None:
                     assInfo['Styles'][k]['Fontname'] = newfont_name[nfnKey][1].split('?')[0]
+                    if fontstr[0] == '@': assInfo['Styles'][k]['Fontname'] = '@' + assInfo['Styles'][k]['Fontname']
                     
         used_nf_name2 = {}
         for k2 in [k for k in newfont_name.keys() if not newfont_name[k][1] is None]:
@@ -1989,7 +1989,7 @@ def assFontChange(newfont_name: dict, asspath: str, assInfo: dict, splitEvents: 
             for fnLine in splitEvents.keys():
                 if len(splitEvents[fnLine]) == 1: continue
                 for l in splitEvents[fnLine]:
-                    fname = l['Fontname']
+                    fname = l['Fontname'].lstrip('@')
                     #if len(fname) > 0 and not used_nf_name[fname.upper()][1] is None:
                     if len(fname) > 0:
                         replaceFn = None
@@ -3686,7 +3686,7 @@ def cFontSubset(font_info):
                     if work == 19:
                         muxer = 2
                     for subp in subonlyp:
-                        newasspaths, newfont_name, mkvr = main(font_info2, [subp[1]],
+                        newasspaths, newfont_name, mkvr = main(font_info2, [subp],
                                                                mux=False,
                                                                outdir=[assout_cache, fontout_cache, mkvout_cache],
                                                                FFmuxer = muxer)
