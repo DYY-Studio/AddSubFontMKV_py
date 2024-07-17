@@ -8,13 +8,16 @@
 
 # 调用库，请不要修改
 from typing import Optional
+import fontTools.misc.encodingTools
 from fontTools import ttLib, subset
 from chardet.universaldetector import UniversalDetector
 from chardet import detect_all
-import os, sys, re, winreg, zlib, json, copy, traceback, shutil, configparser, time
+import os, sys, re, winreg, zlib, json, copy, traceback, shutil, configparser, time, locale, codecs
 from os import path
 from colorama import init
 from datetime import datetime
+
+#fontTools.misc.encodingTools.getEncoding()
 
 # 初始化环境变量
 # *************************************************************************
@@ -156,34 +159,42 @@ subext = ['ass', 'ssa', 'srt', 'sup', 'idx']
 # lcidfil
 # LCID过滤器，用于选择字体名称所用语言
 # 结构为：{ platformID(Decimal) : { LCID : textcoding } }
-# 目前Textcoding没有实际作用，仅用于让这个词典可读性更强
+# Textcoding将用于进行平台优先语言筛选
 # 详情可在 https://docs.microsoft.com/en-us/typography/opentype/spec/name#platform-encoding-and-language-ids 查询
+# 或见 https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oe376/6c085406-a698-4e12-9d4d-c3b0ee3dbc4a
 lcidfil = {
 3: {
     2052: 'gbk',
     1042: 'euc-kr',
-    1041: 'shift-jis',
-    1033: 'utf-16be',
+    1041: 'shift_jis',
+    1033: 'utf-16-be',
     1028: 'big5',
-    0: 'utf-16be'
+    0: 'utf-16-be'
 }, 2: {
     0: 'ascii',
-    1: 'utf-8',
-    2: 'iso-8859-1'
+    1: 'utf_16_be',
+    2: 'latin1'
 }, 1: {
     33: 'gbk',
-    23: 'euc-kr',
+    23: 'euc_kr',
     19: 'big5',
-    11: 'shift-jis',
+    11: 'shift_jis',
     0: 'mac-roman'
 }, 0: {
-    0: 'utf-16be',
-    1: 'utf-16be',
-    2: 'utf-16be',
-    3: 'utf-16be',
-    4: 'utf-16be',
-    5: 'utf-16be'
+    0: 'utf-16-be',
+    1: 'utf-16-be',
+    2: 'utf-16-be',
+    3: 'utf-16-be',
+    4: 'utf-16-be',
+    5: 'utf-16-be',
+    6: 'utf-16-be'
 }}
+
+# 将fontTools文本编解码模块中gb2312等效参数改为gbk
+fontTools.misc.encodingTools._encodingMap[3][3] = 'gbk'
+fontTools.misc.encodingTools._encodingMap[1][25] = 'gbk'
+
+# lcidfil = fontTools.misc.encodingTools._encodingMap
 
 # 以下环境变量不应更改
 # 编译 style行 搜索用正则表达式
@@ -204,6 +215,7 @@ init()
 
 iso639_all = {}
 preferLang = subl_local
+preferEncoding = codecs.lookup(locale.getlocale()[1]).name
 
 # 读取外部INI文件内的环境变量值以取代程序内预设
 if path.exists(path.join(path.dirname(__file__), 'ASFMKVpy.ini')):
@@ -926,18 +938,16 @@ def assFileWrite(filePath: str, assInfo: dict, subsetRecover: bool = True, keepG
     file.writelines(assLines)
     file.close()
 
-def getFontFileList(customPath: list = [], font_name: dict = {}, noreg: bool = False):
+def getFontFileList(customPath: list = [], noreg: bool = False):
     """
 获取字体文件列表
 
 接受输入
   customPath: 用户指定的字体文件夹
-  font_name: 用于更新font_name（启用从注册表读取名称的功能时有效）
   noreg: 只从用户提供的customPath获取输入
 
 将会返回
   filelist: 字体文件清单 [[ 字体绝对路径, 读取位置（'': 注册表, '0': 自定义目录） ], ...]
-  font_name: 用于更新font_name（启用从注册表读取名称的功能时有效）
     """
     filelist = []
 
@@ -953,28 +963,15 @@ def getFontFileList(customPath: list = [], font_name: dict = {}, noreg: bool = F
             if fontkey10_num > 0:
                 for i in range(fontkey10_num):
                     p = winreg.EnumValue(fontkey10, i)[1]
-                    # n = winreg.EnumValue(fontkey10, i)[0]
                     if path.exists(p):
-                        # test = n.split('&')
-                        # if len(test) > 1:
-                        #     for i in range(0, len(test)):
-                        #         font_name[re.sub(r'\(.*?\)', '', test[i].strip(' '))] = [p, i]
-                        # else: font_name[re.sub(r'\(.*?\)', '', n.strip(' '))] = [p, 0]
                         filelist.append([p, ''])
-                        # test = path.splitext(path.basename(p))[0].split('&')
         except:
             pass
         for i in range(fontkey_num):
             # 从 系统字体注册表 读取
             k = winreg.EnumValue(fontkey, i)[1]
-            # n = winreg.EnumValue(fontkey, i)[0]
             pk = path.join(r'C:\Windows\Fonts', k)
             if path.exists(pk):
-                # test = n.split('&')
-                # if len(test) > 1:
-                #     for i in range(0, len(test)):
-                #         font_name[re.sub(r'\(.*?\)', '', test[i].strip(' '))] = [pk, i]
-                # else: font_name[re.sub(r'\(.*?\)', '', n.strip(' '))] = [pk, 0]
                 filelist.append([pk, ''])
 
     # 从定义的文件夹读取
@@ -992,7 +989,7 @@ def getFontFileList(customPath: list = [], font_name: dict = {}, noreg: bool = F
 
     # print(font_name)
     # os.system('pause')
-    return filelist, font_name
+    return filelist
 
 
 charEx = re.compile(r'[\U00020000-\U0003134F\u3400-\u4DBF\u2070-\u2BFF\u02B0-\u02FF\uE000-\uF8FF\u0080-\u00B1\u00B4-\u00BF]')
@@ -1120,12 +1117,14 @@ def outputSameLength(s: str) -> str:
 
 
 # font_info 列表结构
-#   [ font_name, font_n_lower, font_family, warning_font ]
+#   [ font_name, font_n_lower, font_family, warning_font, font_all ]
 # font_name 词典结构
-#   { 字体名称 : [ 字体绝对路径 , 字体索引 (仅用于TTC/OTC; 如果是TTF/OTF，默认为0) , 字体样式 ] }
+#   { 字体名称 : [ 字体绝对路径 , 字体索引 (仅用于TTC/OTC; 如果是TTF/OTF，默认为0) ] }
+# font_all 字典结构
+#   { 字体绝对路径: { 字体索引: (字体名称(dict), 斜体, 粗体, 字体样式(dict), 字体家族名称(dict)) } }
 # dupfont 词典结构
 #   { 重复字体名称 : [ 字体1绝对路径, 字体2绝对路径, ... ] }
-def fontProgress(fl: list, font_info: list = [{}, {}, {}, []], overwrite: bool = False, usingCache: bool = True) -> list:
+def fontProgress(fl: list, font_info: list = [{}, {}, {}, [], {}], overwrite: bool = False, usingCache: bool = True) -> list:
     """
 字体处理部分
 
@@ -1147,11 +1146,17 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, []], overwrite: bool =
     font_family = font_info[2]
     font_n_lower = font_info[1]
     f_n = font_info[0]
+    f_all = font_info[4]
 
-    # 写入缓存用的词典
+    # 字体缓存所用词典
     # 格式为
-    # {dirCRCKey: {fontCRCKey: {字体索引: (字体名称(list), 斜体, 粗体, 字体样式字符串, 字体家族名称)}}}
+    # {dirCRCKey: {
+    #   fontCRCKey: {
+    #       字体索引: (字体名称(dict), 斜体, 粗体, 字体样式(dict), 字体家族名称(dict))
+    #   }
+    # }}
     fontCache = {}
+
     fontCacheN = {}
     dirKeyList = {}
     appdata = os.getenv('APPDATA')
@@ -1166,8 +1171,10 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, []], overwrite: bool =
         s = fl[si][0]
         fromCustom = False
         fl[si][1] = str(fl[si][1])
+
         if len(fl[si][1]) > 0: fromCustom = True
         # 如果有来自自定义文件夹标记，则将 fromCustom 设为 True
+        
         # 检查字体扩展名
         ext = path.splitext(s)[1][1:]
         if ext.lower() not in ['ttf', 'ttc', 'otf', 'otc']: continue
@@ -1194,6 +1201,11 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, []], overwrite: bool =
                     except:
                         print('\n\033[1;31m[ERROR] 缓存文件读取失败 \"{}\"\033[0m'.format('{}.json'.format(dirCRCKey)))
                         os.remove(fontCacheFile)
+                    else:
+                        if not isinstance(list(fontCache[dirCRCKey].values())[0]['0'][3], dict):
+                            print('\n\033[1;32m[FIX] 已删除旧版缓存 \"{}\"\033[0m'.format('{}.json'.format(dirCRCKey)))
+                            os.remove(fontCacheFile)
+                            del fontCache[dirCRCKey]
             
             if dirCRCKey in fontCache:
                 fontCRCKey = hex(zlib.crc32((s.lower() + str(path.getsize(s)) + str(path.getctime(s))).encode('utf-8')))[2:].upper().rjust(8, '0')
@@ -1244,6 +1256,7 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, []], overwrite: bool =
         else:
             tc = readFontCache
         
+        # 计算字体CRC
         if len(fontCRCKey) == 0:
             fontCRCKey = hex(zlib.crc32((s.lower() + str(path.getsize(s)) + str(path.getctime(s))).encode('utf-8')))[2:].upper().rjust(8, '0')
         if not fontCacheN.get(dirCRCKey, False):
@@ -1251,11 +1264,13 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, []], overwrite: bool =
         else:
             fontCacheN[dirCRCKey].update({fontCRCKey: {}})
 
-        for ti in range(0, len(tc)):
+        # 处理字体信息
+        for ti, t in enumerate(tc):
+
             tencodings = []
-            if readFontCache is not None: ti = str(ti)
-            t = tc[ti]
+
             if readFontCache is None:
+
                 # 读取字体的 'OS/2' 表的 'fsSelection' 项查询字体的粗体斜体信息
                 try:
                     os_2 = bin(t['OS/2'].fsSelection)[2:].zfill(10)
@@ -1265,103 +1280,133 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, []], overwrite: bool =
                 isBold = int(os_2[-6])
                 # isCustom = int(os_2[-7])
                 # isRegular = int(os_2[-7])
+
                 # 读取字体的 'name' 表
                 fstyle = ''
+                dictFstyle = {'other': []}
                 familyN = ''
+                dictFamilyN = {'other': []}
                 try:
-                    indexs = len(t['name'].names)
+                    len(t['name'].names)
                 except:
                     break
+
                 isWarningFont = False
-                namestrl1 = []
-                namestrl2 = []
-                donotStyle = False
-                for ii in range(0, indexs):
-                    name = t['name'].names[ii]
+                dictNameStr = {'other': []}
+
+                for ii, name in enumerate(t['name'].names):
+
+                    platfID = name.platformID
+                    langID = name.langID
+                    encoding = lcidfil[platfID].get(langID, 'other')
+
                     c = ''
                     # 若 nameID 为 1，读取 NameRecord 的字体家族名称
                     if name.nameID == 1:
                         familyN, c, isWarningFont = fnReadCheck(t, ii, s)
                         familyN = familyN.strip(' ').strip('\u0000')
+
+                        if encoding not in dictFamilyN or isinstance(dictFamilyN[encoding], str):
+                            dictFamilyN[encoding] = familyN
+                        else:
+                            dictFamilyN['other'].append(familyN)
+                        
                         font_family.setdefault(familyN, {})
+
                     # 若 nameID 为 2，读取 NameRecord 的字体样式
-                    elif name.nameID == 2 and not donotStyle:
+                    elif name.nameID == 2:
                         fstyle, c, isWarningFont = fnReadCheck(t, ii, s)
                         if not fstyle is None:
                             fstyle = fstyle.strip(' ').strip('\u0000')
+
+                            if encoding not in dictFstyle or isinstance(dictFstyle[encoding], str):
+                                dictFstyle[encoding] = fstyle
+                            else:
+                                dictFstyle['other'].append(fstyle)
+            
                     # 若 nameID 为 4，读取 NameRecord 的字体完整名称           
                     elif name.nameID == 4:
                         # 如果 fontTools 解码失败，则尝试使用 utf-16-be 直接解码
                         namestr, c, isWarningFont = fnReadCheck(t, ii, s)
                         if namestr is None: continue
-                        namestr = namestr.strip(' ').strip('\u0000')
-                        if name.langID in lcidfil[name.platformID].keys():
-                            if namestr not in namestrl1: namestrl1.append(namestr.strip(' '))
-                            if namestr.lower().find(familyN.lower()) > -1: donotStyle = True
-                        else:
-                            if namestr not in namestrl2: namestrl2.append(namestr.strip(' '))
-                        del namestr
+                        namestr = namestr.strip(' \u0000')
+
+                        if encoding not in dictNameStr:
+                            dictNameStr[encoding] = [namestr]
+                        elif namestr not in dictNameStr[encoding]:
+                            dictNameStr[encoding].append(namestr)
+                    
                     else:
                         continue
-                if len(namestrl1) > 0:
-                    namestrl = namestrl1
-                elif len(namestrl2) > 0:
-                    namestrl = namestrl2
-                else:
-                    continue
-                del namestrl1, namestrl2
+
             else:
-                c = t[6]
-                isWarningFont = t[5]
-                namestrl = t[0]
-                isItalic = int(t[1])
-                isBold = int(t[2])
-                fstyle = t[3]
-                familyN = t[4]
-                font_family.setdefault(familyN, {})
+                # 对于从字体缓存读取的字体，则直接赋值
+                c = tc[t][6]
+                isWarningFont = tc[t][5]
+                dictNameStr = tc[t][0]
+                isItalic = int(tc[t][1])
+                isBold = int(tc[t][2])
+                dictFstyle = tc[t][3]
+                dictFamilyN = tc[t][4]
+                for k, v in dictFamilyN.items():
+                    if k == 'other':
+                        for n in v:
+                            font_family.setdefault(n, {})
+                    else:
+                        font_family.setdefault(v, {})
+            
             if isWarningFont:
                 if c not in tencodings:
                     tencodings.append(c)
-            addfmn = True
-            for ns in namestrl:
-                if ns.lower().find(familyN.lower()) > -1:
-                    addfmn = False
-            if addfmn: namestrl.append(familyN.strip(' '))
-            # else: donotRf[familyN] = (namestrl, isItalic, isBold)
-            # print(namestr, path.basename(s))
 
-            fontCacheN[dirCRCKey][fontCRCKey][ti] = (tuple(namestrl), isItalic, isBold, fstyle, familyN, isWarningFont, c)
+            # 写入到字体缓存
+            fontCacheN[dirCRCKey][fontCRCKey][ti] = (dictNameStr, isItalic, isBold, dictFstyle, dictFamilyN, isWarningFont, c)
 
-            for namestr in namestrl:
-                # print(namestr)
-                if isWarningFont:
-                    if namestr not in warning_font:
-                        warning_font[namestr.lower()] = [c for c in tencodings if len(c) > 0]
-                if f_n.get(namestr, False) and not overwrite:
-                    # 如果发现列表中已有相同名称的字体，检测它的文件名、扩展名、父目录、样式是否相同
-                    # 如果有一者不同且不来自自定义文件夹，添加到重复字体列表
-                    dupp = f_n[namestr][0]
-                    if (dupp != s and path.splitext(path.basename(dupp))[0] != path.splitext(path.basename(s))[0] and
-                            not fromCustom and f_n[namestr][2].lower() == fstyle.lower()):
-                        if not startQuiet: print('\n\033[1;35m[WARNING] 字体\"{0}\"与字体\"{1}\"的名称\"{2}\"重复！\033[0m'.format(
-                            path.basename(f_n[namestr][0]), path.basename(s), namestr))
-                        if dupfont.get(namestr) is not None:
-                            if s not in dupfont[namestr]:
-                                dupfont[namestr].append(s)
-                        else:
-                            dupfont[namestr] = [dupp, s]
-                else:
-                    f_n[namestr] = [s, ti, fstyle, isTc]
-                if not font_n_lower.get(namestr.lower(), False):
-                    font_n_lower[namestr.lower()] = namestr
-                    # print(f_n[namestr], namestr)
-                if len(familyN) > 0 and namestr != namestrl[-1]:
-                    if font_family[familyN].get((isItalic, isBold)) is not None:
-                        if namestr not in font_family[familyN][(isItalic, isBold)]:
-                            font_family[familyN][(isItalic, isBold)].append(namestr)
+            for ec, nsList in dictNameStr.items():
+                for namestr in nsList:
+                    # print(namestr)
+                    if isWarningFont:
+                        if namestr not in warning_font:
+                            warning_font[namestr.lower()] = [c for c in tencodings if len(c) > 0]
+                    
+                    if f_n.get(namestr, False) and not overwrite:
+                        # 如果发现列表中已有相同名称的字体，检测它的文件名、扩展名、父目录、样式是否相同
+                        # 如果有一者不同且不来自自定义文件夹，添加到重复字体列表
+                        dupp = f_n[namestr][0]
+                        if (dupp != s and path.splitext(path.basename(dupp))[0] != path.splitext(path.basename(s))[0] and not fromCustom and f_n[namestr][2] == dictFstyle):
+                            if not startQuiet: print('\n\033[1;35m[WARNING] 字体\"{0}\"与字体\"{1}\"的名称\"{2}\"重复！\033[0m'.format(
+                                path.basename(f_n[namestr][0]), path.basename(s), namestr))
+                            if dupfont.get(namestr) is not None:
+                                if s not in dupfont[namestr]:
+                                    dupfont[namestr].append(s)
+                            else:
+                                dupfont[namestr] = [dupp, s]
                     else:
-                        font_family[familyN].setdefault((isItalic, isBold), [namestr])
-        if readFontCache is None: tc[ti].close()
+                        f_n[namestr] = [s, ti, dictFstyle, isTc]
+                    
+                    if not font_n_lower.get(namestr.lower(), False):
+                        font_n_lower[namestr.lower()] = namestr
+                        
+                if len(dictFamilyN) >= 1:
+                    listFamilyN = []
+                    if ec in dictFamilyN and isinstance(dictFamilyN[ec], str):
+                        listFamilyN.append(dictFamilyN[ec])
+                    else:
+                        listFamilyN.extend(dictFamilyN['other'])
+                    for fN in listFamilyN:
+                        if font_family[fN].get((isItalic, isBold)) is not None:
+                            if namestr not in font_family[fN][(isItalic, isBold)]:
+                                font_family[fN][(isItalic, isBold)].append(namestr)
+                        else:
+                            font_family[fN].setdefault((isItalic, isBold), [namestr])
+            
+            if readFontCache is None: t.close()
+
+            f_all_item = (dictNameStr, isItalic, isBold, dictFstyle, dictFamilyN)
+            if s in f_all:
+                f_all[s].setdefault(ti, f_all_item)
+            else:
+                f_all.setdefault(s, {ti : f_all_item})
 
     for dirK in fontCacheN.keys():
         fontCacheFile = path.join(fontCacheDir, '{0}.json'.format(dirK))
@@ -1372,21 +1417,24 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, []], overwrite: bool =
     keys = list(font_family.keys())
     for k in keys:
         if not len(font_family[k]) > 1:
-            # if k not in donotRf:
             font_family.pop(k)
-            # else:
-            #     font_family[k] = {(donotRf[k][1], donotRf[k][2]): donotRf[k][0]}
     del keys
+
     dupfont_cache = dupfont
     dupfont = {}
+
     for k in dupfont_cache.keys():
         k2 = tuple(dupfont_cache[k])
         if dupfont.get(k2) is not None:
             dupfont[k2].append(k)
         else:
             dupfont[k2] = [k]
+
     del dupfont_cache, readFontCache, fontCache, fontCacheN
-    return [f_n, font_n_lower, font_family, warning_font]
+
+    f_all.clear()
+
+    return [f_n, font_n_lower, font_family, warning_font, f_all]
 
 
 # print(filelist)
@@ -1433,6 +1481,7 @@ def checkAssFont(fontlist: dict, font_info: list, fn_lines: list = [], onlycheck
     font_n_lower = font_info[1]
     font_family = font_info[2]
     warning_font = font_info[3]
+    f_all = font_info[4]
 
     ignoreLostFonts = noRequestFont
 
@@ -1494,6 +1543,7 @@ def checkAssFont(fontlist: dict, font_info: list, fn_lines: list = [], onlycheck
                                 font_n_lower.update(addFont[1])
                                 font_family.update(addFont[2])
                                 warning_font.extend(addFont[3])
+                                f_all.update(addFont[4])
                             else:
                                 for fd in addFont[0].keys():
                                     if fd not in font_name:
@@ -1507,6 +1557,9 @@ def checkAssFont(fontlist: dict, font_info: list, fn_lines: list = [], onlycheck
                                 for fd in addFont[3]:
                                     if fd not in warning_font:
                                         warning_font[fd] = addFont[3][fd]
+                                for fd in addFont[4].keys():
+                                    if fd not in f_all:
+                                        f_all[fd] = addFont[4][fd]
                             cok = True
                             recheck = True
                     else:
@@ -1535,7 +1588,7 @@ def checkAssFont(fontlist: dict, font_info: list, fn_lines: list = [], onlycheck
                 if warningStop:
                     print('\033[1;31m[WARNING] 请修复\"{0}\"，工作已中断\033[0m'.format(ss))
                     os.system('pause')
-                    return None, [font_name, font_n_lower, font_family, warning_font]
+                    return None, [font_name, font_n_lower, font_family, warning_font, f_all]
             if directout < 3:
                 # 如果找到，添加到assfont列表
                 font_path = font_name[ss][0]
@@ -1579,7 +1632,7 @@ def checkAssFont(fontlist: dict, font_info: list, fn_lines: list = [], onlycheck
                     #     assfont[dict_key] = [fontlist[s], s]
                 # print(assfont[dict_key])
         if directout >= 3:
-            return None, [font_name, font_n_lower, font_family, warning_font]
+            return None, [font_name, font_n_lower, font_family, warning_font, f_all]
     if len(fn_lines) > 0 and not onlycheck:
         fn_lines_cache = fn_lines
         for i in range(0, len(fn_lines_cache)):
@@ -1587,7 +1640,7 @@ def checkAssFont(fontlist: dict, font_info: list, fn_lines: list = [], onlycheck
             fi = s[1][s[1].keys()[0]]
             fn_lines[i] = [s[0], {s[1].keys()[0]: [fi[1], fnGetFromFamilyName(font_family, fi[1], fi[2], fi[3])]}]
     # print(assfont)
-    return assfont, [font_name, font_n_lower, font_family, warning_font]
+    return assfont, [font_name, font_n_lower, font_family, warning_font, f_all]
 
 
 # print('正在输出字体子集字符集')
@@ -1824,11 +1877,10 @@ def assFontSubset(assfont: dict, fontdir: str, allTTF: bool = False):
             continue
         # os.system('pyftsubset {0}'.format(' '.join(subsetarg)))
         if path.exists(subfontpath):
-            subfontbyte = open(subfontpath, mode='rb')
-            subfontcrc = str(hex(zlib.crc32(subfontbyte.read())))[2:].upper()
+            subfontcrc = hex(zlib.crc32((gfs + s[4]).encode('utf-8', 'replace')))[2:].upper()
             if len(subfontcrc) < 8: subfontcrc = '0' + subfontcrc
             # print('CRC32: {0} \"{1}\"'.format(subfontcrc, path.basename(s[0])))
-            subfontbyte.close()
+
             rawf = ttLib.TTFont(s[0], lazy=True, fontNumber=int(s[1]))
             newf = ttLib.TTFont(subfontpath, lazy=False)
             if len(newf['name'].names) == 0:
@@ -3972,9 +4024,9 @@ def loadMain(reload: bool = False):
     os.system('title ASFMKV Python Remake Pre21 ^| (c) 2022-2024 yyfll ^| Apache-2.0')
     if not reload:
         if not o_fontload:
-            font_list, font_name = getFontFileList(fontin)
-            font_info = fontProgress(font_list, [font_name, {}, {}, {}], f_priority)
-            del font_name, font_list
+            font_list = getFontFileList(fontin)
+            font_info = fontProgress(font_list, [{}, {}, {}, [], {}], f_priority)
+            del font_list
         mkvmv = '\n\033[1;33m没有检测到 mkvmerge\033[0m'
 
         if os.system('mkvmerge -V 1>nul 2>nul') > 0:
@@ -4097,9 +4149,9 @@ def loadMain(reload: bool = False):
                 del font_info
                 dupfont = None
                 dupfont = {}
-                font_list, font_name = getFontFileList(fontin, {})
-                font_info = fontProgress(font_list, [font_name, {}, {}, {}], usingCache=usingCache)
-                del font_name, font_list
+                font_list = getFontFileList(fontin)
+                font_info = fontProgress(font_list, usingCache=usingCache)
+                del font_list
 
             if work2 not in [2, 3, 4, 5] :
                 pass
