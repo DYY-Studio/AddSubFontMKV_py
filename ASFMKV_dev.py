@@ -3767,7 +3767,7 @@ def cFontSubset(font_info):
 
 def cLicense():
     cls()
-    print('''AddSubFontMKV Python Remake Preview 21
+    print('''AddSubFontMKV Python Remake Preview 22
 
 Apache-2.0 License
 https://www.apache.org/licenses/
@@ -4033,7 +4033,7 @@ def checkFF():
 def loadMain(reload: bool = False):
     global extlist, no_mkvm, no_cmdc, dupfont, mkvmv, font_info, fontin, langlist, ffmv, insteadFF
     # 初始化字体列表 和 mkvmerge 相关参数
-    os.system('title ASFMKV Python Remake Pre21 ^| (c) 2022-2024 yyfll ^| Apache-2.0')
+    os.system('title ASFMKV Python Remake Pre22 ^| (c) 2022-2024 yyfll ^| Apache-2.0')
     if not reload:
         if not o_fontload:
             font_list = getFontFileList(fontin)
@@ -4080,7 +4080,7 @@ def loadMain(reload: bool = False):
     if not len(ffmv) > 0:
         ffMessage = '\n[F] 检查并启用FFmpeg'
         ffSelect = 'F'
-    print('''ASFMKV Python Remake Pre21 | (c) 2022-2024 yyfll{0}{5}
+    print('''ASFMKV Python Remake Pre22 | (c) 2022-2024 yyfll{0}{5}
 字体名称数: [\033[1;33m{2}\033[0m]（{4}）
 请选择功能:
 [A] 列出字幕所用字体
