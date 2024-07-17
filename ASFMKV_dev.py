@@ -1166,6 +1166,7 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, [], {}], overwrite: bo
 
     # print(fl)
     flL = len(fl)
+    noLegacy = False
     print('\033[1;32m正在读取字体信息...\033[0m')
     for si in range(0, flL):
         s = fl[si][0]
@@ -1192,20 +1193,30 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, [], {}], overwrite: bo
 
         if usingCache:
             if not dirCRCKey in fontCache:
-                fontCacheFile = path.join(fontCacheDir, '{}.json'.format(dirCRCKey))
+                fontCacheFile = path.join(fontCacheDir, dirCRCKey)
+                fontCacheFileLegacy = path.join(fontCacheDir, '{}.json'.format(dirCRCKey))
+
                 if path.exists(fontCacheFile):
                     try:
-                        jsonFile = open(fontCacheFile, mode='r', encoding='utf-8')
+                        jsonFile = open(fontCacheFile, mode='rb')
+                        fontCache[dirCRCKey] = json.loads(zlib.decompress(jsonFile.read()).decode('utf-8'))
+                        jsonFile.close()
+                    except:
+                        print('\n\033[1;31m[ERROR] 缓存文件读取失败 \"{}\"\033[0m'.format(dirCRCKey))
+                        os.remove(fontCacheFile)
+                elif path.exists(fontCacheFileLegacy) and not noLegacy:
+                    try:
+                        jsonFile = open(fontCacheFileLegacy, mode='r', encoding='utf-8')
                         fontCache[dirCRCKey] = json.load(jsonFile)
                         jsonFile.close()
                     except:
                         print('\n\033[1;31m[ERROR] 缓存文件读取失败 \"{}\"\033[0m'.format('{}.json'.format(dirCRCKey)))
-                        os.remove(fontCacheFile)
+                        noLegacy = True
                     else:
+                        print('\n\033[1;33m[FIX] 已禁用旧版缓存 \"{}\"\033[0m'.format('{}.json'.format(dirCRCKey)))
+                        noLegacy = True
                         if not isinstance(list(fontCache[dirCRCKey].values())[0]['0'][3], dict):
-                            print('\n\033[1;32m[FIX] 已删除旧版缓存 \"{}\"\033[0m'.format('{}.json'.format(dirCRCKey)))
-                            os.remove(fontCacheFile)
-                            del fontCache[dirCRCKey]
+                            del fontCache[dirCRCKey] 
             
             if dirCRCKey in fontCache:
                 fontCRCKey = hex(zlib.crc32((s.lower() + str(path.getsize(s)) + str(path.getctime(s))).encode('utf-8')))[2:].upper().rjust(8, '0')
@@ -1409,9 +1420,9 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, [], {}], overwrite: bo
                 f_all.setdefault(s, {ti : f_all_item})
 
     for dirK in fontCacheN.keys():
-        fontCacheFile = path.join(fontCacheDir, '{0}.json'.format(dirK))
-        jsonFile = open(fontCacheFile, mode='w', encoding='utf-8')
-        json.dump(fontCacheN[dirK], fp=jsonFile, indent=2, ensure_ascii=False)
+        fontCacheFile = path.join(fontCacheDir, dirK)
+        jsonFile = open(fontCacheFile, mode='wb')
+        jsonFile.write(zlib.compress(json.dumps(fontCacheN[dirK], ensure_ascii=False).encode('utf-8')))
         jsonFile.close()
 
     keys = list(font_family.keys())
