@@ -1442,6 +1442,7 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, [], {}], overwrite: bo
 
 # for s in font_name.keys(): print('{0}: {1}'.format(s, font_name[s]))
 def fnGetFromFamilyName(font_family: dict, fn: str, isitalic: int, isbold: int) -> str:
+    '''Fallback'''
     if font_family.get(fn, False):
         if font_family[fn].get((isitalic, isbold), False):
             return font_family[fn][(isitalic, isbold)][0]
@@ -3801,7 +3802,7 @@ def cFontSearch(font_info: list):
                         f_nget = font_info[0].get(f_nt)
                         if f_nget is not None:
                             print('\033[1;31m[{0}]\033[0m {2}\033[1m\n\"{1}\"\033[0m\n'.format(f_nt, f_nget[0],
-                                                                                               f_nget[2]))
+                                                                                               f_nget[2].get(preferEncoding, '')))
                             hadget = True
                 else:
                     for k in font_info[0].keys():
@@ -3811,7 +3812,7 @@ def cFontSearch(font_info: list):
                             if kand in k.lower():
                                 ksame += 1
                         if ksame == len(f_n.split(' ')):
-                            print('\033[1;31m[{0}]\033[0m {2}\033[1m\n\"{1}\"\033[0m\n'.format(k, f_nget[0], f_nget[2]))
+                            print('\033[1;31m[{0}]\033[0m {2}\033[1m\n\"{1}\"\033[0m\n'.format(k, f_nget[0], f_nget[2].get(preferEncoding, '')))
                             hadget = True
                 if not hadget:
                     print('\033[1;31m没有找到所搜索的字体\033[0m')
