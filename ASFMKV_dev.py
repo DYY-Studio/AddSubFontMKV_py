@@ -380,7 +380,7 @@ changeOnly: 是否只输出字体在行中发生变化的行（带有 \\fn \\r \
             eventfont = assInfo['Styles'].get(events[i]['Style'].lstrip('*'))
         if eventfont is None:
             if len(re.sub(effectDel, '', eventftext)) > 0:
-                raise Exception('未定义 行{0} 所用样式"{1}\"'.format(i, events[i]['Style'].lstrip('*')))
+                raise Exception('未定义 行{0} 所用样式"{1}\"'.format(i+1, events[i]['Style'].lstrip('*')))
             continue
 
         # 粗体、斜体标签处理
@@ -1124,7 +1124,7 @@ def outputSameLength(s: str) -> str:
 #   { 字体绝对路径: { 字体索引: (字体名称(dict), 斜体, 粗体, 字体样式(dict), 字体家族名称(dict)) } }
 # dupfont 词典结构
 #   { 重复字体名称 : [ 字体1绝对路径, 字体2绝对路径, ... ] }
-def fontProgress(fl: list, font_info: list = [{}, {}, {}, [], {}], overwrite: bool = False, usingCache: bool = True) -> list:
+def fontProgress(fl: list, font_info: list = [{}, {}, {}, {}, {}], overwrite: bool = False, usingCache: bool = True) -> list:
     """
 字体处理部分
 
@@ -4039,7 +4039,7 @@ def loadMain(reload: bool = False):
     if not reload:
         if not o_fontload:
             font_list = getFontFileList(fontin)
-            font_info = fontProgress(font_list, [{}, {}, {}, [], {}], f_priority)
+            font_info = fontProgress(font_list, [{}, {}, {}, {}, {}], f_priority)
             del font_list
         mkvmv = '\n\033[1;33m没有检测到 mkvmerge\033[0m'
 
