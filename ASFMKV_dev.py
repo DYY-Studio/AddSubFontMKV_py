@@ -2344,7 +2344,7 @@ ASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要mkvme
     return mkvmr
 
 
-def getFileList(inPath: str, extFilter: list[str] = [], subdir: bool = False) -> list[str]:
+def getFileList(inPath: str, extFilter: list[str] = [], subdir: bool = False) -> list[tuple[str, str]]:
     """
 从输入的目录中获取文件列表
 需要以下输入
@@ -3659,7 +3659,7 @@ def cFontSubset(font_info):
                     if not subonly:
                         medias = [[path.splitext(path.basename(cpath))[0], cpath]]
                     else:
-                        subonlyp = [cpath]
+                        subonlyp = [(path.splitext(path.basename(cpath))[0], cpath)]
                     cpath = path.dirname(cpath)
                 else:
                     if work != 19: medias = getFileList(cpath, extlist, v_subdir)
@@ -3739,6 +3739,7 @@ def cFontSubset(font_info):
                                 showMessageSubset(newasspaths, newfont_name)
                             else:
                                 break
+                            if fontload: del font_info2
                     else:
                         print('\033[1;31m[ERROR] 找不到视频对应字幕\033[0m')
                 elif subonly:
@@ -3750,7 +3751,7 @@ def cFontSubset(font_info):
                     if work == 19:
                         muxer = 2
                     for subp in subonlyp:
-                        newasspaths, newfont_name, mkvr = main(font_info2, [subp],
+                        newasspaths, newfont_name, mkvr = main(font_info2, [subp[1]],
                                                                mux=False,
                                                                outdir=[assout_cache, fontout_cache, mkvout_cache],
                                                                FFmuxer = muxer)
@@ -3758,6 +3759,7 @@ def cFontSubset(font_info):
                             showMessageSubset(newasspaths, newfont_name)
                         else:
                             break
+                    if fontload: del font_info2
 
         else:
             leave = False
