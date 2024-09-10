@@ -16,6 +16,7 @@ import os, sys, re, winreg, zlib, json, copy, traceback, shutil, configparser, t
 from os import path
 from colorama import init
 from datetime import datetime
+from enum import Enum
 
 #fontTools.misc.encodingTools.getEncoding()
 
@@ -38,7 +39,7 @@ no_extcheck = False
 # subl_local 设置sublangs默认语言（如果有对应语言包则显示对应语言） 不区分大小写
 subl_local = 'zh_CN'
 # *************************************************************************
-# subName2Lang 字幕的 <视频文件名>.<注释/标题>.ass 的 注释/标题 部分到ISO 639的快速映射表
+# subName2Lang 字幕的 <视频文件名><注释/标题>.ass 的 注释/标题 部分到ISO 639的快速映射表
 # 格式 <注释/标题>(如果前面有点要写点) = <ISO-639-1/2/3> ; .sc = chi; .tc = chi; ...
 # 不区分大小写
 subName2Lang = '.sc = chi; .tc = chi; .chs = chi; .cht = chi; .jap = jpn; .简体中文 = chi; .繁體中文 = chi; .繁体中文 = chi; .zh-hans = chi; .zh-hant = chi'
@@ -211,8 +212,6 @@ extlist = [s.strip(' ').lstrip('.').lower() for s in extlist.split(';') if len(s
 fontin = [s.strip(' ') for s in fontin.split('?') if len(s) > 0]
 fontin = [s for s in fontin if path.isdir(s)]
 
-subName2Lang = {'='.join(s.split('=')[0:-1]).strip(' ').lower() : s.split('=')[-1].strip(' ').lower() for s in subName2Lang.split(';')}
-
 if o_fontload and not fontload:
     fontload = True
 langlist = {}
@@ -230,7 +229,7 @@ if path.exists(path.join(path.dirname(__file__), 'ASFMKVpy.ini')):
     conf = configparser.ConfigParser()
     conf.read('ASFMKVpy.ini', encoding='utf-8')
     settingList = ["usingFF", "extlist", "no_extcheck", "mkvout", "assout", "fontout", "fontin", "exact_lost", "char_lost", "char_compatible", "fontload", "o_fontload", "s_fontload", "f_priority", "notfont", "matchStrict", "startQuiet", "warningStop", "ignoreLost", "errorStop", "rmAssIn", "rmAttach", "v_subdir", "s_subdir", "copyfont", "resultw", "subl_local"]
-    strSettings = ['mkvout', 'assout', 'fontout', 'subl_local']
+    strSettings = ['mkvout', 'assout', 'fontout', 'subl_local', "subName2Lang"]
     for k in conf['settings']:
         if k in settingList:
             try:
@@ -258,8 +257,19 @@ if path.exists(path.join(path.dirname(__file__), 'ASFMKVpy.ini')):
     conf.clear()
     del conf
 
+subName2Lang = {'='.join(s.split('=')[0:-1]).strip(' ').lower() : s.split('=')[-1].strip(' ').lower() for s in subName2Lang.split(';')}
 
-def showColorBool(text: str, tf: bool, tColor: int = 31, fColor: int = 33) -> str:
+class textFrontColor(Enum):
+    Black = 30
+    Red = 31
+    Green = 32
+    Yellow = 33
+    Blue = 34
+    Purple = 35
+    lightBlue = 36
+    White = 37
+
+def showColorBool(text: str, tf: bool, tColor: int = textFrontColor.Red, fColor: int = textFrontColor.Yellow) -> str:
     if tf: return f'\033[1;{tColor}m{text}\033[0m'
     else: return f'\033[1;{fColor}m{text}\033[0m'
 
