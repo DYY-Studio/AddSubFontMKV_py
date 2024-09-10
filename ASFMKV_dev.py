@@ -3314,6 +3314,9 @@ def getForceSub(media_ass: dict) -> str:
 
     maxNum = len(str(len(sublangs)))
 
+    if len(sublangs) == 1:
+        return list(sublangs.keys())[0]
+
     def showFocusSub(i: str):
         print('【字幕示例】')
         for index, ii in enumerate(sublangs.keys()):
