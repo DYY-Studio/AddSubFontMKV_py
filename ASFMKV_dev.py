@@ -38,6 +38,11 @@ no_extcheck = False
 # subl_local 设置sublangs默认语言（如果有对应语言包则显示对应语言） 不区分大小写
 subl_local = 'zh_CN'
 # *************************************************************************
+# subName2Lang 字幕的 <视频文件名>.<注释/标题>.ass 的 注释/标题 部分到ISO 639的快速映射表
+# 格式 <注释/标题>(如果前面有点要写点) = <ISO-639-1/2/3> ; .sc = chi; .tc = chi; ...
+# 不区分大小写
+subName2Lang = '.sc = chi; .tc = chi; .chs = chi; .cht = chi; .jap = jpn; .简体中文 = chi; .繁體中文 = chi; .繁体中文 = chi; .zh-hans = chi; .zh-hant = chi'
+# *************************************************************************
 # mkvout 媒体文件输出目录(封装)
 # 在最前方用"?"标记来表示这是一个子目录
 # 注意: 在Python中需要在左侧引号前加 r 来保留 Windows 路径中的反斜杠，路径末尾不需要反斜杠
@@ -205,6 +210,9 @@ extlist = [s.strip(' ').lstrip('.').lower() for s in extlist.split(';') if len(s
 # 切分fontin列表
 fontin = [s.strip(' ') for s in fontin.split('?') if len(s) > 0]
 fontin = [s for s in fontin if path.isdir(s)]
+
+subName2Lang = {'='.join(s.split('=')[0:-1]).strip(' ').lower() : s.split('=')[-1].strip(' ').lower() for s in subName2Lang.split(';')}
+
 if o_fontload and not fontload:
     fontload = True
 langlist = {}
@@ -3253,7 +3261,7 @@ translationLang = {}
 
 def getSubsLangsV2(media_ass: dict) -> list:
     '''获取字幕语言代码的用户交互部分'''
-    global langlist, no_mkvm, iso639_all, preferLang, translationLang
+    global langlist, no_mkvm, iso639_all, preferLang, translationLang, subName2Lang
     # 从Pre23开始，sublangs改为匹配注释
     # 特殊键「Key」：无注释名称的字幕
     sublangs = {}
@@ -3339,38 +3347,46 @@ def getSubsLangsV2(media_ass: dict) -> list:
                     else:
                         print('\"{0}\" \033[1;34m{2}{1}\033[0m'.format(path.basename(subExp[ii][1]), showlang, showISO))
 
+            
             lang = ''
+
             while not (lang.lower() in langlist or lang in langlist):
                 cls()
                 showFocusSub(i)
                 print('')
 
-                if no_mkvm and len(translationLang) > 0:
-                    searchLang = '仅本地语言搜索'
-                elif no_mkvm:
-                    searchLang = '该状态下不可用'
-                elif len(translationLang) == 0:
-                    searchLang = '仅英文English搜索'
+                autoGet = False
+
+                if i in subName2Lang: 
+                    lang = subName2Lang[i]
+                    autoGet = True
                 else:
-                    searchLang = 'English/本地语言搜索'
+                    if no_mkvm and len(translationLang) > 0:
+                        searchLang = '仅本地语言搜索'
+                    elif no_mkvm:
+                        searchLang = '该状态下不可用'
+                    elif len(translationLang) == 0:
+                        searchLang = '仅英文English搜索'
+                    else:
+                        searchLang = 'English/本地语言搜索'
 
-                if len(sublangs[i]) > 0:
-                        print('该项之前已经有赋值了，如果您不想修改，请直接回车')
-                elif no_mkvm:
-                        print('可接受语言代码: ISO-639-2T/3，不区分大小写')
-                else:
-                        print('可接受语言代码: ISO-639-1/2/3，不区分大小写')
-                
-                print('常用语言代码: [chi]中 [eng]英 [jpn]日 [kor]韩 [und]未知')
-
-                if len(langlist) == 0: print('[WANRING] 您正在无语言编码参考文件的环境下运行，程序无法确认您输入的正确性')
-
-                lang = input('请输入语言(或搜索语言名称，{}):'.format(searchLang)).strip(' \'\"')
-
-                if len(lang) == 0:
                     if len(sublangs[i]) > 0:
-                        lang = sublangs[i]
-                    continue
+                        print('该项之前已经有赋值了，如果您不想修改，请直接回车')
+                    elif no_mkvm:
+                        print('可接受语言代码: ISO-639-2T/3，不区分大小写')
+                    else:
+                        print('可接受语言代码: ISO-639-1/2/3，不区分大小写')
+                    
+                    print('常用语言代码: [chi]中 [eng]英 [jpn]日 [kor]韩 [und]未知')
+
+                    if len(langlist) == 0: print('[WANRING] 您正在无语言编码参考文件的环境下运行，程序无法确认您输入的正确性')
+
+                    lang = input('请输入语言(或搜索语言名称，{}):'.format(searchLang)).strip(' \'\"')
+
+                    if len(lang) == 0:
+                        if len(sublangs[i]) > 0:
+                            lang = sublangs[i]
+                        continue
 
                 if noLang:
                     if len(lang) in [2,3] and len(''.join(re.findall(r'[A-Za-z]', lang))) == len(lang):
@@ -3439,7 +3455,8 @@ def getSubsLangsV2(media_ass: dict) -> list:
                 if lN == lang.lower():
                     lN = getLangName(lang)
                 
-                print('\n语言为\"\033[1;33m{0}\033[0m\"，确定吗？'.format(lN))
+                if autoGet: print('\n通过用户自定义匹配表匹配到语言')
+                print('语言为\"\033[1;33m{0}\033[0m\"，确定吗？'.format(lN))
 
                 if os.system('choice') == 1:
 
@@ -3472,8 +3489,10 @@ def getSubsLangsV2(media_ass: dict) -> list:
                             return []
                         else:
                             cls()
+
                 else:
                     lang = ''
+            
     return sublangs
 
 
