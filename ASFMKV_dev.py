@@ -11,7 +11,7 @@ from typing import Optional
 import fontTools.misc.encodingTools
 from fontTools import ttLib, subset
 from chardet.universaldetector import UniversalDetector
-from chardet import detect_all
+from chardet import detect
 import os, sys, re, winreg, zlib, json, copy, traceback, shutil, configparser, time, locale, codecs
 from os import path
 from colorama import init
@@ -254,6 +254,10 @@ if path.exists(path.join(path.dirname(__file__), 'ASFMKVpy.ini')):
 def showColorBool(text: str, tf: bool, tColor: int = 31, fColor: int = 33) -> str:
     if tf: return f'\033[1;{tColor}m{text}\033[0m'
     else: return f'\033[1;{fColor}m{text}\033[0m'
+
+
+def isPathExsis(path: str, workDir: str, forceAbs: bool = False) -> bool:
+    pass
 
 
 def getISOLangs():
@@ -1039,7 +1043,7 @@ def fnReadCheck(ttFont: ttLib.TTFont, index: int, fontpath: str):
                     elif len(td) > 2:
                         todetect.append(int(td[2:], 16))
                 todetect = todetect + todetect
-                da = [d for d in detect_all(bytes(todetect)) if d['encoding'] is not None]
+                da = [d for d in [detect(bytes(todetect))] if d['encoding'] is not None]
                 if len(da) > 0: da = [d for d in da if d['encoding'].lower() not in ['mac_roman', 'windows-1252', 'iso-8859-1', 'ascii']]
                 if len(da) > 0: 
                     try:
@@ -2001,7 +2005,7 @@ def dExistsPath(filePath: str, isFile: bool = True):
 
 
 def assFontChange(newfont_name: dict, asspath: str, assInfo: dict, splitEvents: dict[int, list[dict]], outdir: str = '', 
-                  cover: bool = False, embedded: bool = False) -> str:
+                  cover: bool = True, embedded: bool = False) -> str:
     """
 更改ASS样式对应的字体
 
@@ -2127,6 +2131,13 @@ def assFontChange(newfont_name: dict, asspath: str, assInfo: dict, splitEvents: 
     
     return newasspath
 
+def basenameNoEXT(filename: str) -> str:
+    return path.splitext(path.basename(filename))[0]
+
+def getSubName(v: str, sub: str) -> tuple[str, str]:
+    bSub = basenameNoEXT(sub)
+    bVideo = basenameNoEXT(v)
+    return sub, bSub[bSub.find(bVideo) + len(bVideo):]
 
 def ffASFMKV(file: str, outfile: str = '', asslangs: list = [], asspaths: list = [], fontpaths: list = []) -> int:
     """
@@ -2201,17 +2212,19 @@ ffASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要ffm
             metadata = []
             if len(assnote) > 1:
                 metadata.append('title=\"{}\"'.format(assnote.lstrip('.')))
+            
             if len(asslangs) > 0 and path.splitext(s)[1][1:].lower() not in ['idx']:
-                if i < len(asslangs):
-                    metadata.append('language=\"{}\"'.format(asslangs[i]))
-                else:
-                    metadata.append('language=\"{}\"'.format(asslangs[len(asslangs) - 1]))
+                if assnote.lower() in asslangs:
+                    metadata.append('language=\"{}\"'.format(asslangs[assnote]))
+
             if len(metadata) > 0:
                 for m in metadata:
                     metaList.append('-metadata:s:{1} {0}'.format(m, firstIdx))
+
             ffargs.append('-i \"{}\"'.format(s))
             mapList.append('-map {}'.format(i + 1))
             firstIdx += 1
+
     if len(fontpaths) > 0:
         extMime = {
             'ttf': 'font/ttf',
@@ -2223,7 +2236,7 @@ ffASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要ffm
             ffargs.append('-attach \"{}\"'.format(s))
             firstIdx += 1
     ffmr = os.system('ffmpeg {0} {3} {4} -c:s copy {2} \"{1}\"'.format(' '.join(ffargs), outfile, ' '.join(metaList), ' '.join(mapList), ' '.join(copyList)))
-    # print('ffmpeg {0} {3} {4} -c:s copy {2} \"{1}\"'.format(' '.join(ffargs), outfile, ' '.join(metaList), ' '.join(mapList), ' '.join(copyList)))
+    
     if ffmr >= 1:
         print('\n\033[1;31m[ERROR] 检测到不正常的mkvmerge返回值，重定向输出...\033[0m')
         os.system('set \"FFREPORT=file=ffreport_cache.log:level=32\" & chcp 65001 & ffmpeg {0} {2} {3} -c:s copy {1} NUL'.format(' '.join(ffargs), ' '.join(metaList), ' '.join(mapList), ' '.join(copyList)))
@@ -2252,7 +2265,7 @@ ffASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要ffm
     return ffmr
 
 
-def ASFMKV(file: str, outfile: str = '', asslangs: list = [], asspaths: list = [], fontpaths: list = []) -> int:
+def ASFMKV(file: str, outfile: str = '', asslangs: dict = {}, asspaths: list = [], fontpaths: list = []) -> int:
     """
 ASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要mkvmerge命令行支持
 
@@ -2260,7 +2273,7 @@ ASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要mkvme
 
   file: 媒体文件绝对路径
   outfile: 输出文件的绝对路径，如果该选项空缺，默认为 输入媒体文件.muxed.mkv
-  asslangs: 赋值给字幕轨道的语言，如果字幕轨道多于asslangs的项目数，超出部分将全部应用asslangs的末项
+  asslangs: 赋值给字幕轨道的语言
   asspaths: 字幕绝对路径列表
   fontpaths: 字体列表，格式为 [字体1绝对路径, 字体2绝对路径, ...]
 
@@ -2297,12 +2310,15 @@ ASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要mkvme
             # print(assfn, fn, assnote)
             if len(assnote) > 1:
                 mkvargs.extend(['--track-name', '0:{0}'.format(assnote.lstrip('.'))])
+            
             if len(asslangs) > 0 and path.splitext(s)[1][1:].lower() not in ['idx']:
                 mkvargs.append('--language')
-                if i < len(asslangs):
-                    mkvargs.append('0:{0}'.format(asslangs[i]))
+
+                if assnote.lower() in asslangs:
+                    mkvargs.append('0:{0}'.format(asslangs[assnote.lower()]))
                 else:
-                    mkvargs.append('0:{0}'.format(asslangs[len(asslangs) - 1]))
+                    mkvargs.append('0:und')
+            
             mkvargs.extend(['(', s, ')'])
     if len(fontpaths) > 0:
         for s in fontpaths:
@@ -2746,7 +2762,7 @@ def namePosition(files: list):
 
 
 def main(font_info: list, asspath: list, outdir: list = ['', '', ''], mux: bool = False, vpath: str = '',
-         asslangs: list = [], FFmuxer: int = 0, fontline: int = -1):
+         asslangs: dict = {}, FFmuxer: int = 0, fontline: int = -1):
     """
 主函数，负责调用各函数走完完整的处理流程
 
@@ -2758,7 +2774,7 @@ def main(font_info: list, asspath: list, outdir: list = ['', '', ''], mux: bool 
   outdir: 输出目录，格式 [ 字幕输出目录, 字体输出目录, 视频输出目录 ]，如果项数不足，则取最后一项；默认为 asspaths 中每项所在目录
   mux: 不要封装，只运行到子集化完成
   vpath: 视频路径，只在 mux = True 时生效
-  asslangs: 字幕语言列表，将会按照顺序赋给对应的字幕轨道，只在 mux = True 时生效
+  asslangs: 字幕语言列表，将会按照字幕注释赋给对应的字幕轨道，只在 mux = True 时生效
   FFmuxer: 0 = mkvmerge, 1 = FFmpeg, 2 = ASS/SSA Embedded
 
 将会返回以下
@@ -3233,21 +3249,26 @@ def showMessageSubset(newasspaths: list, newfont_name: dict):
         font_already.append(newfont_name[nf][1])
     del font_already
 
-
 translationLang = {}
 
-def getSubsLangs(media_ass: dict) -> list:
+def getSubsLangsV2(media_ass: dict) -> list:
     '''获取字幕语言代码的用户交互部分'''
     global langlist, no_mkvm, iso639_all, preferLang, translationLang
-    subs_count = {}
-    sublangs = []
+    # 从Pre23开始，sublangs改为匹配注释
+    # 特殊键「Key」：无注释名称的字幕
+    sublangs = {}
+    # 与sublangs对应的字幕示例
+    subExp = {}
+
     for m in media_ass.keys():
-        if subs_count.get(len(media_ass[m]), -1) == -1:
-            subs_count[len(media_ass[m])] = [m]
-        else:
-            subs_count[len(media_ass[m])].append(m)
-    # minsubs = min(list(subs_count.keys()))
-    maxsubs = max(list(subs_count.keys()))
+        for sub in media_ass[m]:
+            subName = getSubName(m, sub)[1]
+            if len(subName) > 0:
+                sublangs.setdefault(subName.lower(), '')
+                subExp.setdefault(subName.lower(), (m, sub))
+            else: 
+                sublangs.setdefault('', '')
+                subExp.setdefault('', (m, sub))
 
     cls()
     if len(iso639_all) == 0:
@@ -3267,11 +3288,6 @@ def getSubsLangs(media_ass: dict) -> list:
                         if preferLang.split('_')[0] in lk0:
                             translationLang = iso639_all.get(lk0, {})
                             break
-                        # for lk in iso639_all[lk0].keys():
-                        #     if lk in translationLang:
-                        #         translationLang[lk].append(iso639_all[lk0][lk])
-                        #     else:
-                        #         translationLang[lk] = [iso639_all[lk0][lk]]
 
         if not no_mkvm:
             print('正在从mkvmerge获取ISO-639语言列表，请稍等...')
@@ -3292,7 +3308,7 @@ def getSubsLangs(media_ass: dict) -> list:
     reStart = True
     while reStart:
         reStart = False
-        for i in range(0, maxsubs):
+        for i in sublangs.keys():
             
             def getLangName(code: str) -> str:
                 '''获取语言代码的系统语言'''
@@ -3305,27 +3321,30 @@ def getSubsLangs(media_ass: dict) -> list:
                 if len(showlang) == 0: return code
                 return showlang
 
-            def showFocusSub(i: int):
+            def showFocusSub(i: str):
                 print('【字幕示例】')
-                for ii in range(0, len(media_ass[subs_count[maxsubs][0]])):
+                for ii in sublangs.keys():
                     showlang = ''
                     showISO = ''
-                    if ii < len(sublangs):
-                        showlang = getLangName(sublangs[ii].lower())
-                        if showlang == sublangs[ii].lower():
-                            showlang = getLangName(sublangs[ii])
-                        showISO = '{}: '.format(sublangs[ii].lower())
+                    showlang = getLangName(sublangs[ii].lower())
+                    if showlang == sublangs[ii].lower():
+                        showlang = getLangName(sublangs[ii])
+                    showISO = '{}: '.format(sublangs[ii].lower())
+
+                    highlightSet = getSubName(subExp[ii][0], subExp[ii][1])
+                    highlightStr = path.basename(highlightSet[0]).replace(highlightSet[1], f'\033[1;31m{highlightSet[1]}\033[1;33m')
 
                     if ii == i:  
-                        print('\"\033[1;33m{0}\033[0m\" \033[1;34m{2}{1}\033[0m'.format(path.basename(media_ass[subs_count[maxsubs][0]][ii]), showlang, showISO))
+                        print('\"\033[1;33m{0}\033[0m\" \033[1;34m{2}{1}\033[0m'.format(highlightStr, showlang, showISO))
                     else:
-                        print('\"{0}\" \033[1;34m{2}{1}\033[0m'.format(path.basename(media_ass[subs_count[maxsubs][0]][ii]), showlang, showISO))
+                        print('\"{0}\" \033[1;34m{2}{1}\033[0m'.format(path.basename(subExp[ii][1]), showlang, showISO))
 
             lang = ''
             while not (lang.lower() in langlist or lang in langlist):
                 cls()
                 showFocusSub(i)
                 print('')
+
                 if no_mkvm and len(translationLang) > 0:
                     searchLang = '仅本地语言搜索'
                 elif no_mkvm:
@@ -3334,25 +3353,25 @@ def getSubsLangs(media_ass: dict) -> list:
                     searchLang = '仅英文English搜索'
                 else:
                     searchLang = 'English/本地语言搜索'
-                if len(sublangs) > i:
-                    if len(sublangs[i]) > 0:
+
+                if len(sublangs[i]) > 0:
                         print('该项之前已经有赋值了，如果您不想修改，请直接回车')
-                    elif no_mkvm:
-                        print('可接受语言代码: ISO-639-2T/3，不区分大小写')
-                    else:
-                        print('可接受语言代码: ISO-639-1/2/3，不区分大小写')
                 elif no_mkvm:
-                    print('可接受语言代码: ISO-639-2T/3，不区分大小写')
+                        print('可接受语言代码: ISO-639-2T/3，不区分大小写')
                 else:
-                    print('可接受语言代码: ISO-639-1/2/3，不区分大小写')
+                        print('可接受语言代码: ISO-639-1/2/3，不区分大小写')
+                
                 print('常用语言代码: [chi]中 [eng]英 [jpn]日 [kor]韩 [und]未知')
+
                 if len(langlist) == 0: print('[WANRING] 您正在无语言编码参考文件的环境下运行，程序无法确认您输入的正确性')
+
                 lang = input('请输入语言(或搜索语言名称，{}):'.format(searchLang)).strip(' \'\"')
+
                 if len(lang) == 0:
-                    if len(sublangs) > i:
-                        if len(sublangs[i]) > 0:
-                            lang = sublangs[i]
+                    if len(sublangs[i]) > 0:
+                        lang = sublangs[i]
                     continue
+
                 if noLang:
                     if len(lang) in [2,3] and len(''.join(re.findall(r'[A-Za-z]', lang))) == len(lang):
                         lang = lang.lower()
@@ -3401,8 +3420,6 @@ def getSubsLangs(media_ass: dict) -> list:
                         for kii in range(0, len(hitDict[ki])):
                             hitIndex += 1
                             print('[\033[1;33m{0}\033[0m] {1}'.format(hitIndex, getLangName(list(hitDict[ki].values())[kii])))
-                            # print(getLangName(list(hitDict[ki].values())[kii]))
-                            # print('[\033[1;33m{0}\033[0m] {1}'.format(hitIndex, list(hitDict[ki].keys())[kii]))
                             hitDictOut[hitIndex] = (list(hitDict[ki].keys())[kii], list(hitDict[ki].values())[kii])
                     if len(hitDictOut) == 1:
                         lang = hitDictOut[0][1]
@@ -3421,24 +3438,31 @@ def getSubsLangs(media_ass: dict) -> list:
                 lN = getLangName(lang.lower())
                 if lN == lang.lower():
                     lN = getLangName(lang)
+                
                 print('\n语言为\"\033[1;33m{0}\033[0m\"，确定吗？'.format(lN))
+
                 if os.system('choice') == 1:
-                    if i >= len(sublangs):
-                        sublangs.append(lang)
-                    else:
-                        sublangs[i] = lang
+
+                    sublangs[i] = lang
                     cls()
                     showFocusSub(i)
-                    if i == maxsubs - 1:
+
+                    if i == list(sublangs.keys())[-1]:
                         cls()
                         print('【完整预览】')
-                        for subs in media_ass.values():
-                            for si in range(0, len(subs)):
-                                lN = getLangName(sublangs[si].lower())
-                                if lN == sublangs[si].lower():
-                                    lN = getLangName(sublangs[si])
-                                print('\"{0}\" \033[1;34m{1}\033[0m'.format(path.basename(subs[si]), getLangName(sublangs[si].lower())))
-                            print('')
+
+                        for k in sublangs.keys():
+
+                            lN = getLangName(sublangs[k].lower())
+                            if lN == sublangs[k].lower():
+                                lN = getLangName(sublangs[k])
+                            
+                            highlightSet = getSubName(subExp[k][0], subExp[k][1])
+                            highlightStr = path.basename(highlightSet[0]).replace(highlightSet[1], f'\033[1;31m{highlightSet[1]}\033[0m')
+
+                            print('\"{0}\" \033[1;34m{1}\033[0m'.format(highlightStr, getLangName(sublangs[k].lower())))
+                        
+                        print('')
                         print('【完整预览】')
                         print('请检查您的输入是否正确，要重新开始吗(R)？或是放弃(C)？按Y继续封装')
                         work = os.system('choice /C RYC')
@@ -3709,13 +3733,13 @@ def cFontSubset(font_info):
                     media_ass = getSubtitles(cpath, medias)
                     if len(media_ass.values()) > 0:
                         sublangs = None
-                        sublangs = []
+                        sublangs = {}
                         muxer = 0
                         cls()
                         if domux: 
                             print('您需要为字幕轨道添加语言信息吗？')
                             if os.system('choice') == 1:
-                                sublangs = getSubsLangs(media_ass)
+                                sublangs = getSubsLangsV2(media_ass)
                         # print(media_ass)
                         if work == 20 or (work == 2 and no_mkvm):
                             muxer = 1
