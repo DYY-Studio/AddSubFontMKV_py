@@ -3359,15 +3359,14 @@ def getSubsLangsV2(media_ass: dict) -> list:
 
             
             lang = ''
+            autoGet = False
 
             while not (lang.lower() in langlist or lang in langlist):
                 cls()
                 showFocusSub(i)
                 print('')
 
-                autoGet = False
-
-                if i in subName2Lang: 
+                if not autoGet and i in subName2Lang: 
                     lang = subName2Lang[i]
                     autoGet = True
                 else:
@@ -3465,10 +3464,12 @@ def getSubsLangsV2(media_ass: dict) -> list:
                 if lN == lang.lower():
                     lN = getLangName(lang)
                 
-                if autoGet: print('\n通过用户自定义匹配表匹配到语言')
+                if autoGet: print('\n用户自定义匹配表有对应语言')
                 print('语言为\"\033[1;33m{0}\033[0m\"，确定吗？'.format(lN))
 
                 if os.system('choice') == 1:
+
+                    autoGet = False
 
                     sublangs[i] = lang
                     cls()
