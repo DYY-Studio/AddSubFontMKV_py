@@ -2157,7 +2157,7 @@ def getSubName(v: str, sub: str) -> tuple[str, str]:
     bVideo = basenameNoEXT(v)
     return sub, bSub[bSub.find(bVideo) + len(bVideo):]
 
-def ffASFMKV(file: str, outfile: str = '', asslangs: list = [], asspaths: list = [], fontpaths: list = []) -> int:
+def ffASFMKV(file: str, outfile: str = '', asslangs: list = [], asspaths: list = [], fontpaths: list = [], forceSubTrack: str = '?') -> int:
     """
 ffASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要ffmpeg、ffprobe命令行支持
 
@@ -2216,11 +2216,16 @@ ffASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要ffm
                 firstIdx -= 1
             elif '-map 0:s' not in mapList:
                 mapList.append('-map 0:s')
+            if not rmAssIn and f['disposition']['default'] == 1:
+                copyList.append('-disposition:{} 0'.format(f['index']))
     ffargs.append('-i \"{}\"'.format(file))
   
     fn = path.splitext(path.basename(file))[0]
     metaList.append('-metadata:g title=\"{}\"'.format(fn))
     if len(asspaths) > 0:
+
+        defaultSet = False
+
         for i in range(0, len(asspaths)):
             s = asspaths[i]
             assfn = path.splitext(path.basename(s))[0]
@@ -2242,6 +2247,13 @@ ffASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要ffm
 
             ffargs.append('-i \"{}\"'.format(s))
             mapList.append('-map {}'.format(i + 1))
+
+            if not defaultSet and (assnote.lower() == forceSubTrack.lower() or forceSubTrack == '?'):
+                copyList.append('-disposition:{} default'.format(firstIdx))
+                defaultSet = True
+            else:
+                copyList.append('-disposition:{} 0'.format(firstIdx))
+
             firstIdx += 1
 
     if len(fontpaths) > 0:
@@ -2284,7 +2296,7 @@ ffASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要ffm
     return ffmr
 
 
-def ASFMKV(file: str, outfile: str = '', asslangs: dict = {}, asspaths: list = [], fontpaths: list = []) -> int:
+def ASFMKV(file: str, outfile: str = '', asslangs: dict = {}, asspaths: list = [], fontpaths: list = [], forceSubTrack: str = '?') -> int:
     """
 ASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要mkvmerge命令行支持
 
@@ -2322,6 +2334,7 @@ ASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要mkvme
     mkvargs.extend(['(', file, ')'])
     fn = path.splitext(path.basename(file))[0]
     if len(asspaths) > 0:
+        defaultSet = False
         for i in range(0, len(asspaths)):
             s = asspaths[i]
             assfn = path.splitext(path.basename(s))[0]
@@ -2338,6 +2351,12 @@ ASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要mkvme
                     mkvargs.append('0:{0}'.format(asslangs[assnote.lower()]))
                 else:
                     mkvargs.append('0:und')
+                
+                if not defaultSet and (assnote.lower() == forceSubTrack.lower() or forceSubTrack == '?'):
+                    mkvargs.extend(['--default-track-flag', '0:1'])
+                    defaultSet = True
+                else:
+                    mkvargs.extend(['--default-track-flag', '0:0'])
             
             mkvargs.extend(['(', s, ')'])
     if len(fontpaths) > 0:
@@ -2782,7 +2801,7 @@ def namePosition(files: list):
 
 
 def main(font_info: list, asspath: list, outdir: list = ['', '', ''], mux: bool = False, vpath: str = '',
-         asslangs: dict = {}, FFmuxer: int = 0, fontline: int = -1):
+         asslangs: dict = {}, FFmuxer: int = 0, fontline: int = -1, forceSubTrack: str = '?'):
     """
 主函数，负责调用各函数走完完整的处理流程
 
@@ -2891,10 +2910,10 @@ def main(font_info: list, asspath: list, outdir: list = ['', '', ''], mux: bool 
                 outdir[2] = path.dirname(outdir[2])
         if FFmuxer == 1:
             mkvr = ffASFMKV(vpath, path.join(outdir[2], path.splitext(path.basename(vpath))[0] + '.mkv'),
-                      asslangs=asslangs, asspaths=newasspath, fontpaths=list(set([f[0] for f in newfont_name.values()])))
+                      asslangs=asslangs, asspaths=newasspath, fontpaths=list(set([f[0] for f in newfont_name.values()])), forceSubTrack=forceSubTrack)
         elif FFmuxer == 0:
             mkvr = ASFMKV(vpath, path.join(outdir[2], path.splitext(path.basename(vpath))[0] + '.mkv'),
-                      asslangs=asslangs, asspaths=newasspath, fontpaths=list(set([f[0] for f in newfont_name.values()])))
+                      asslangs=asslangs, asspaths=newasspath, fontpaths=list(set([f[0] for f in newfont_name.values()])), forceSubTrack=forceSubTrack)
         else:
             mkvr = 0
         if not notfont:
@@ -3271,15 +3290,12 @@ def showMessageSubset(newasspaths: list, newfont_name: dict):
 
 translationLang = {}
 
-def getSubsLangsV2(media_ass: dict) -> list:
-    '''获取字幕语言代码的用户交互部分'''
-    global langlist, no_mkvm, iso639_all, preferLang, translationLang, subName2Lang
+def getAllSubName(media_ass: dict) -> tuple[dict, dict]:
     # 从Pre23开始，sublangs改为匹配注释
     # 特殊键「Key」：无注释名称的字幕
     sublangs = {}
     # 与sublangs对应的字幕示例
     subExp = {}
-
     for m in media_ass.keys():
         for sub in media_ass[m]:
             subName = getSubName(m, sub)[1]
@@ -3289,6 +3305,55 @@ def getSubsLangsV2(media_ass: dict) -> list:
             else: 
                 sublangs.setdefault('', '')
                 subExp.setdefault('', (m, sub))
+    return sublangs, subExp
+
+
+def getForceSub(media_ass: dict) -> str:
+    '''选择默认字幕的用户交互部分'''
+    sublangs, subExp = getAllSubName(media_ass)
+
+    maxNum = len(str(len(sublangs)))
+
+    def showFocusSub(i: str):
+        print('【字幕示例】')
+        for index, ii in enumerate(sublangs.keys()):
+
+            highlightSet = getSubName(subExp[ii][0], subExp[ii][1])
+            highlightStr = path.basename(highlightSet[0]).replace(highlightSet[1], f'\033[1;31m{highlightSet[1]}\033[1;33m')
+            normalStr = path.basename(highlightSet[0]).replace(highlightSet[1], f'\033[1;31m{highlightSet[1]}\033[0m')
+
+            if ii == i:  
+                print('[{1}] \"\033[1;33m{0}\033[0m\" \033[1;34m默认轨道\033[0m'.format(highlightStr, str(index).rjust(maxNum)))
+            else:
+                print('[{1}] \"{0}\"'.format(normalStr, str(index).rjust(maxNum)))
+    
+    reStart = True
+    while(reStart):
+        reStart = False
+        showFocusSub('?')
+        print('')
+        select = input('请输入字幕文件名前括号内的序号以选择默认字幕轨道: ')
+        selectCount = 0
+        while((not select.strip(' ').isnumeric() or int(select.strip(' ')) not in range(0, len(sublangs))) and selectCount < 3):
+            selectCount+=1
+            select = input('请输入字幕文件名前括号内的序号以选择默认字幕轨道: ')
+        
+        if selectCount >= 3: return '?'
+        
+        cls()
+        showFocusSub(list(sublangs.keys())[int(select)])
+        print('')
+        isFin = input('确定选择这个字幕为默认轨道吗？[输入Y并回车确认]: ')
+        if isFin.lower().strip(' ') != 'y': reStart = True
+
+        return list(sublangs.keys())[int(select)]
+    
+
+def getSubsLangsV2(media_ass: dict) -> list:
+    '''获取字幕语言代码的用户交互部分'''
+    global langlist, no_mkvm, iso639_all, preferLang, translationLang, subName2Lang
+
+    sublangs, subExp = getAllSubName(media_ass)
 
     cls()
     if len(iso639_all) == 0:
@@ -3766,12 +3831,14 @@ def cFontSubset(font_info):
                     if len(media_ass.values()) > 0:
                         sublangs = None
                         sublangs = {}
+                        forceSubTrack = '?'
                         muxer = 0
                         cls()
                         if domux: 
                             print('您需要为字幕轨道添加语言信息吗？')
                             if os.system('choice') == 1:
                                 sublangs = getSubsLangsV2(media_ass)
+                            forceSubTrack = getForceSub(media_ass)
                         # print(media_ass)
                         if work == 20 or (work == 2 and no_mkvm):
                             muxer = 1
@@ -3790,7 +3857,7 @@ def cFontSubset(font_info):
                                                                 outdir=[assout_cache, fontout_cache, mkvout_cache],
                                                                 vpath=k,
                                                                 asslangs=sublangs,
-                                                                FFmuxer = muxer)
+                                                                FFmuxer = muxer, forceSubTrack=forceSubTrack)
                             if mkvr != -2:
                                 showMessageSubset(newasspaths, newfont_name)
                             else:
