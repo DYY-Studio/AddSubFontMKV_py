@@ -2023,7 +2023,7 @@ def dExistsPath(filePath: str, isFile: bool = True):
 
 
 def assFontChange(newfont_name: dict, asspath: str, assInfo: dict, splitEvents: dict[int, list[dict]], outdir: str = '', 
-                  cover: bool = True, embedded: bool = False) -> str:
+                  cover: bool = False, embedded: bool = False) -> str:
     """
 更改ASS样式对应的字体
 
@@ -2224,7 +2224,8 @@ ffASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要ffm
         for i in range(0, len(asspaths)):
             s = asspaths[i]
             assfn = path.splitext(path.basename(s))[0]
-            assnote = assfn[(assfn.find(fn) + len(fn)):].replace('.subset', '')
+            assnote = assfn[(assfn.find(fn) + len(fn)):]
+            assnote = assnote[0:assnote.find('.subset')]
             # print(assfn, fn, assnote)
             metadata = None
             metadata = []
@@ -2324,7 +2325,8 @@ ASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要mkvme
         for i in range(0, len(asspaths)):
             s = asspaths[i]
             assfn = path.splitext(path.basename(s))[0]
-            assnote = assfn[(assfn.find(fn) + len(fn)):].replace('.subset', '')
+            assnote = assfn[(assfn.find(fn) + len(fn)):]
+            assnote = assnote[0:assnote.find('.subset')]
             # print(assfn, fn, assnote)
             if len(assnote) > 1:
                 mkvargs.extend(['--track-name', '0:{0}'.format(assnote.lstrip('.'))])
@@ -3823,7 +3825,7 @@ def cFontSubset(font_info):
 
 def cLicense():
     cls()
-    print('''AddSubFontMKV Python Remake Preview 22
+    print('''AddSubFontMKV Python Remake Preview 23
 
 Apache-2.0 License
 https://www.apache.org/licenses/
@@ -4089,7 +4091,7 @@ def checkFF():
 def loadMain(reload: bool = False):
     global extlist, no_mkvm, no_cmdc, dupfont, mkvmv, font_info, fontin, langlist, ffmv, insteadFF
     # 初始化字体列表 和 mkvmerge 相关参数
-    os.system('title ASFMKV Python Remake Pre22 ^| (c) 2022-2024 yyfll ^| Apache-2.0')
+    os.system('title ASFMKV Python Remake Pre23 ^| (c) 2022-2024 yyfll ^| Apache-2.0')
     if not reload:
         if not o_fontload:
             font_list = getFontFileList(fontin)
@@ -4136,7 +4138,7 @@ def loadMain(reload: bool = False):
     if not len(ffmv) > 0:
         ffMessage = '\n[F] 检查并启用FFmpeg'
         ffSelect = 'F'
-    print('''ASFMKV Python Remake Pre22 | (c) 2022-2024 yyfll{0}{5}
+    print('''ASFMKV Python Remake Pre23 | (c) 2022-2024 yyfll{0}{5}
 字体名称数: [\033[1;33m{2}\033[0m]（{4}）
 请选择功能:
 [A] 列出字幕所用字体
