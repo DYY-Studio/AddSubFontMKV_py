@@ -44,6 +44,11 @@ subl_local = 'zh_CN'
 # 不区分大小写
 subName2Lang = '.sc = chi; .tc = chi; .chs = chi; .cht = chi; .jap = jpn; .简体中文 = chi; .繁體中文 = chi; .繁体中文 = chi; .zh-hans = chi; .zh-hant = chi'
 # *************************************************************************
+# rudeSubN2L 暴力执行subName2Lang，只要字幕标题中含有对应的字符即套用而非完整匹配
+#   True  启用，只要标题中含有对应项就询问
+#   False 禁用，字幕标题必须与subName2Lang项目完全匹配
+rudeSubN2L = False
+# *************************************************************************
 # mkvout 媒体文件输出目录(封装)
 # 在最前方用"?"标记来表示这是一个子目录
 # 注意: 在Python中需要在左侧引号前加 r 来保留 Windows 路径中的反斜杠，路径末尾不需要反斜杠
@@ -3214,45 +3219,24 @@ def cListAssFont(font_info):
                     fontlist = []
                 del font_info2
         elif work == 3:
-            if resultw:
-                resultw = False
-            else:
-                resultw = True
+            resultw = not resultw
         elif work == 4:
-            if copyfont:
-                copyfont = False
-            else:
-                copyfont = True
+            copyfont = not copyfont
         elif work == 5:
-            if s_subdir:
-                s_subdir = False
-            else:
-                s_subdir = True
+            s_subdir = not s_subdir
         elif work == 6:
             if not o_fontload:
-                if fontload:
-                    fontload = False
-                else:
-                    fontload = True
+                fontload = not fontload
             else:
                 cls()
                 print('在禁用系统字体源的情况下，fontload必须为True')
                 os.system('pause')
         elif work == 7:
-            if exact_lost:
-                exact_lost = False
-            else:
-                exact_lost = True
+            exact_lost = not exact_lost
         elif work == 8:
-            if char_lost:
-                char_lost = False
-            else:
-                char_lost = True
+            char_lost = not char_lost
         elif work == 9:
-            if embeddedFontExtract:
-                embeddedFontExtract = False
-            else:
-                embeddedFontExtract = True
+            embeddedFontExtract = not embeddedFontExtract
         else:
             leave = False
         if work < 3: os.system('pause')
@@ -3436,9 +3420,16 @@ def getSubsLangsV2(media_ass: dict) -> list:
                 showFocusSub(i)
                 print('')
 
-                if not autoGet and i in subName2Lang: 
-                    lang = subName2Lang[i]
-                    autoGet = True
+                if not autoGet:
+                    if i in subName2Lang: 
+                        lang = subName2Lang[i]
+                        autoGet = True
+                    elif rudeSubN2L:
+                        for k in subName2Lang.keys():
+                            if k.lstrip('.') in i:
+                                lang = subName2Lang[i]
+                                autoGet = True
+                                break
                 else:
                     if no_mkvm and len(translationLang) > 0:
                         searchLang = '仅本地语言搜索'
@@ -3580,7 +3571,7 @@ def getSubsLangsV2(media_ass: dict) -> list:
 def cFontSubset(font_info):
     global extlist, v_subdir, s_subdir, rmAssIn, rmAttach, fontload, \
         mkvout, assout, fontout, matchStrict, no_mkvm, notfont, warningStop, errorStop, ignoreLost, char_compatible, \
-        insteadFF, noRequestFont
+        insteadFF, noRequestFont, rudeSubN2L
     leave = True
     while leave:
         cls()
@@ -3593,31 +3584,31 @@ def cFontSubset(font_info):
             showFF = '子集化并封装(FFmpeg)'
         elif not insteadFF:
             showFF = '子集化并封装(mkvmerge)'
-        print('''ASFMKV & ASFMKV-FontSubset
+        print(f'''ASFMKV & ASFMKV-FontSubset
 选择功能:
 [A] 子集化字体
 [B] 子集化并封装(ASS/SSA内嵌)
-[C] {13}
+[C] {showFF}
 [L] 回到上级菜单
 切换开关:
 [1] 检视媒体扩展名列表 及 语言编码列表
-[2] 搜索子目录(视频): \033[1;33m{0}\033[0m
-[3] 搜索子目录(字幕): \033[1;33m{1}\033[0m
-[4] (封装)移除内挂字幕: \033[1;33m{2}\033[0m
-[5] (封装)移除原有附件: \033[1;33m{3}\033[0m
-[6] (封装)不封装字体: \033[1;33m{8}\033[0m
-[7] 严格字幕匹配: \033[1;33m{7}\033[0m
-[8] 媒体文件输出文件夹: \033[1;33m{4}\033[0m
-[9] 字幕文件输出文件夹: \033[1;33m{5}\033[0m
-[0] 字体文件输出文件夹: \033[1;33m{6}\033[0m
-[U] 广兼容性子集化: \033[1;33m{9}\033[0m
-[W] 忽略字体所缺字: \033[1;33m{12}\033[0m
-[X] 子集化失败中断: \033[1;33m{10}\033[0m
-[Y] 忽略字幕缺少字体：\033[1;33m{14}\033[0m
-[Z] 使用工作目录字体: \033[1;33m{11}\033[0m
-'''.format(v_subdir, s_subdir, rmAssIn, rmAttach, mkvout, assout,
-           fontout, matchStrict, notfont, char_compatible, errorStop, fontload, ignoreLost, showFF, noRequestFont))
-        work = os.system('choice /M 请输入 /C AC1234567890UWXYZLB{}'.format(showFFKey))
+[2] 搜索子目录(视频): \033[1;33m{v_subdir}\033[0m
+[3] 搜索子目录(字幕): \033[1;33m{s_subdir}\033[0m
+[4] (封装)移除内挂字幕: \033[1;33m{rmAssIn}\033[0m
+[5] (封装)移除原有附件: \033[1;33m{rmAttach}\033[0m
+[6] (封装)不封装字体: \033[1;33m{notfont}\033[0m
+[7] 严格字幕匹配: \033[1;33m{matchStrict}\033[0m
+[8] 媒体文件输出文件夹: \033[1;33m{mkvout}\033[0m
+[9] 字幕文件输出文件夹: \033[1;33m{assout}\033[0m
+[0] 字体文件输出文件夹: \033[1;33m{fontout}\033[0m
+[U] 广兼容性子集化: \033[1;33m{char_compatible}\033[0m
+[V] 忽略字体所缺字: \033[1;33m{ignoreLost}\033[0m
+[W] 子集化失败中断: \033[1;33m{errorStop}\033[0m
+[X] 忽略字幕缺少字体：\033[1;33m{noRequestFont}\033[0m
+[Y] 使用工作目录字体: \033[1;33m{fontload}\033[0m
+[Z] 暴力字幕标题<>语言匹配: \033[1;33m{rudeSubN2L}\033[0m
+''')
+        work = os.system(f'choice /M 请输入 /C AC1234567890UVWXYZLB{showFFKey}')
 
         if work == 2 and (no_mkvm and not insteadFF):
 
@@ -3641,40 +3632,21 @@ def cFontSubset(font_info):
                 print('没有检测到mkvmerge，无法输出语言编码列表')
         elif work == 4:
             # [2] 搜索子目录(视频)
-            if v_subdir:
-                v_subdir = False
-            else:
-                v_subdir = True
+            v_subdir = not v_subdir
         elif work == 5:
             # [3] 搜索子目录(字幕)
-            if s_subdir:
-                s_subdir = False
-            else:
-                s_subdir = True
+            s_subdir = not s_subdir
         elif work == 6:
             # [4] (封装)移除内挂字幕
-            if rmAssIn:
-                rmAssIn = False
-            else:
-                rmAssIn = True
+            rmAssIn = not rmAssIn
         elif work == 7:
             # [5] (封装)移除原有附件
-            if rmAttach:
-                rmAttach = False
-            else:
-                rmAttach = True
+            rmAttach = not rmAttach
         elif work == 8:
             # [6] (封装)不封装字体
-            if notfont:
-                notfont = False
-            else:
-                notfont = True
-        elif work == 9:
+            notfont = not notfont
             # [7] 严格字幕匹配
-            if matchStrict:
-                matchStrict = False
-            else:
-                matchStrict = True
+            matchStrict = not matchStrict
         elif work in [10, 11, 12]:
             # [8/9/10] 输出文件夹
             cls()
@@ -3688,30 +3660,18 @@ def cFontSubset(font_info):
                 fontout = checkOutPath(input(), fontout)
         elif work == 13:
             # [U] 广兼容性子集化
-            if char_compatible:
-                char_compatible = False
-            else:
-                char_compatible = True
+            char_compatible = not char_compatible
         elif work == 14:
-            # [W] 忽略字体所缺字
-            if ignoreLost:
-                ignoreLost = False
-            else:
-                ignoreLost = True
+            # [V] 忽略字体所缺字
+            ignoreLost = not ignoreLost
         elif work == 15:
-            # [X] 子集化失败中断
-            if errorStop:
-                errorStop = False
-            else:
-                errorStop = True
+            # [W] 子集化失败中断
+            errorStop = not errorStop
         elif work == 16:
-            # [Y] 忽略字幕缺少字体
-            if noRequestFont:
-                noRequestFont = False
-            else:
-                noRequestFont = True
+            # [X] 忽略字幕缺少字体
+            noRequestFont = not noRequestFont
         elif work == 17:
-            # [Z] 使用工作目录字体
+            # [Y] 使用工作目录字体
             if not o_fontload:
                 if fontload:
                     fontload = False
@@ -3721,8 +3681,10 @@ def cFontSubset(font_info):
                 cls()
                 print('在禁用系统字体源的情况下，fontload必须为True')
                 os.system('pause')
+        elif work == 18:
+            rudeSubN2L = not rudeSubN2L
         
-        elif work in [1, 2, 19, 20]:
+        elif work in [1, 2, 20, 21]:
             cls()
             if work == 1:
                 print('''子集化字体
@@ -3767,7 +3729,7 @@ def cFontSubset(font_info):
                     testext = path.splitext(cpath)[1][1:].lower()
                     if testext in extlist:
                         directout = False
-                    elif testext in ['ass', 'ssa'] and work in [1, 19]:
+                    elif testext in ['ass', 'ssa'] and work in [1, 20]:
                         directout = False
                         subonly = True
                     else:
@@ -3786,11 +3748,11 @@ def cFontSubset(font_info):
                         subonlyp = [(path.splitext(path.basename(cpath))[0], cpath)]
                     cpath = path.dirname(cpath)
                 else:
-                    if work != 19: medias = getFileList(cpath, extlist, v_subdir)
+                    if work != 20: medias = getFileList(cpath, extlist, v_subdir)
                     else: medias = []
                     if len(medias) == 0:
                         subonlyp = getFileList(cpath, ['ass', 'ssa'], s_subdir)
-                        if work == 19:
+                        if work == 20:
                             subonly = True
                         elif len(subonlyp) > 0:
                             cls()
@@ -3827,7 +3789,7 @@ def cFontSubset(font_info):
                     mkvout_cache = mkvout
 
                 domux = False
-                if work in [2, 20]: domux = True
+                if work in [2, 21]: domux = True
 
                 if len(medias) > 0:
                     media_ass = getSubtitles(cpath, medias)
@@ -3843,9 +3805,9 @@ def cFontSubset(font_info):
                                 sublangs = getSubsLangsV2(media_ass)
                             forceSubTrack = getForceSub(media_ass)
                         # print(media_ass)
-                        if work == 20 or (work == 2 and no_mkvm):
+                        if work == 21 or (work == 2 and no_mkvm):
                             muxer = 1
-                        elif work == 19:
+                        elif work == 20:
                             muxer = 2
                             domux = False
                         for k in media_ass.keys():
@@ -3874,7 +3836,7 @@ def cFontSubset(font_info):
                     else:
                         font_info2 = font_info
                     muxer = 0
-                    if work == 19:
+                    if work == 20:
                         muxer = 2
                     for subp in subonlyp:
                         newasspaths, newfont_name, mkvr = main(font_info2, [subp[1]],
@@ -3889,7 +3851,7 @@ def cFontSubset(font_info):
 
         else:
             leave = False
-        if work < 4 or work >= 19:
+        if work < 4 or work >= 20:
             os.system('pause')
 
 
