@@ -12,7 +12,7 @@ import fontTools.misc.encodingTools
 from fontTools import ttLib, subset
 from chardet.universaldetector import UniversalDetector
 from chardet import detect
-import os, sys, re, winreg, zlib, json, copy, traceback, shutil, configparser, time, locale, codecs
+import os, sys, re, winreg, zlib, json, copy, traceback, shutil, configparser, time, locale, codecs, argparse
 from os import path
 from colorama import init
 from datetime import datetime
@@ -1143,6 +1143,9 @@ def outputSameLength(s: str) -> str:
     return output + ''.join([' ' for _ in range(0, 60 - length)])
 
 
+# 当前字体缓存版本，小于该版本的字体缓存会被删除重建
+currentFontCacheVer = 2
+
 # font_info 列表结构
 #   [ font_name, font_n_lower, font_family, warning_font, font_all ]
 # font_name 词典结构
@@ -1228,6 +1231,11 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, {}, {}], overwrite: bo
                         jsonFile = open(fontCacheFile, mode='rb')
                         fontCache[dirCRCKey] = json.loads(zlib.decompress(jsonFile.read()).decode('utf-8'))
                         jsonFile.close()
+
+                        if fontCache[dirCRCKey].get('?version', 0) < currentFontCacheVer:
+                            print('\n\033[1;31m[WARNING] 已移除旧版本字体缓存文件 \"{}\"\033[0m'.format(dirCRCKey))
+                            os.remove(fontCacheFile)
+                            fontCache.pop(dirCRCKey)
                     except:
                         print('\n\033[1;31m[ERROR] 缓存文件读取失败 \"{}\"\033[0m'.format(dirCRCKey))
                         os.remove(fontCacheFile)
@@ -1298,13 +1306,13 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, {}, {}], overwrite: bo
         if len(fontCRCKey) == 0:
             fontCRCKey = hex(zlib.crc32((s.lower() + str(path.getsize(s)) + str(path.getctime(s))).encode('utf-8')))[2:].upper().rjust(8, '0')
         if not fontCacheN.get(dirCRCKey, False):
-            fontCacheN[dirCRCKey] = {fontCRCKey: {}}
+            fontCacheN[dirCRCKey] = {fontCRCKey: {}, '?version': currentFontCacheVer}
         else:
             fontCacheN[dirCRCKey].update({fontCRCKey: {}})
 
         # 处理字体信息
         for ti, t in enumerate(tc):
-
+            
             tencodings = []
 
             if readFontCache is None:
@@ -1438,7 +1446,15 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, {}, {}], overwrite: bo
                         else:
                             font_family[fN].setdefault((isItalic, isBold), [namestr])
             
-            if readFontCache is None: t.close()
+            if len(dictFamilyN) >= 1:
+                for k, v in dictFamilyN.items():
+                    if k == 'other': continue
+                    if k not in dictNameStr:
+                        namestr = list(dictNameStr.values())[-1][0]
+                        if namestr.strip(' '):
+                            font_family[v].setdefault((isItalic, isBold), [namestr])
+            
+            if readFontCache is None and ti == len(tc) - 1: t.close()
 
             f_all_item = (dictNameStr, isItalic, isBold, dictFstyle, dictFamilyN)
             if s in f_all:
@@ -1455,7 +1471,12 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, {}, {}], overwrite: bo
     keys = list(font_family.keys())
     for k in keys:
         if not len(font_family[k]) > 1:
-            font_family.pop(k)
+            keepFamily = False
+            for v in font_family[k].values():
+                if v != k:
+                    keepFamily = True
+            if not keepFamily:
+                font_family.pop(k)
     del keys
 
     dupfont_cache = dupfont
@@ -1525,6 +1546,7 @@ def checkAssFont(fontlist: dict, font_info: list, fn_lines: list = [], onlycheck
     ignoreLostFonts = noRequestFont
 
     keys = list(fontlist.keys())
+
     for s in keys:
         isbold = s[2]
         isitalic = s[1]
@@ -3687,31 +3709,31 @@ def cFontSubset(font_info):
         elif work in [1, 2, 20, 21]:
             cls()
             if work == 1:
-                print('''子集化字体
-搜索子目录(视频): \033[1;33m{0}\033[0m
-搜索子目录(字幕): \033[1;33m{1}\033[0m
-严格字幕匹配: \033[1;33m{2}\033[0m
-字幕文件输出文件夹: \033[1;33m{3}\033[0m
-字体文件输出文件夹: \033[1;33m{4}\033[0m
-广兼容性子集化: \033[1;33m{5}\033[0m
-忽略字体所缺字: \033[1;33m{8}\033[0m
-子集化失败中断: \033[1;33m{6}\033[0m
-使用工作目录字体：\033[1;33m{7}\033[0m
-'''.format(v_subdir, s_subdir, matchStrict, assout, fontout, char_compatible, errorStop, fontload, ignoreLost))
+                print(f'''子集化字体
+搜索子目录(视频): \033[1;33m{v_subdir}\033[0m
+搜索子目录(字幕): \033[1;33m{s_subdir}\033[0m
+严格字幕匹配: \033[1;33m{matchStrict}\033[0m
+字幕文件输出文件夹: \033[1;33m{assout}\033[0m
+字体文件输出文件夹: \033[1;33m{fontout}\033[0m
+广兼容性子集化: \033[1;33m{char_compatible}\033[0m
+忽略字体所缺字: \033[1;33m{ignoreLost}\033[0m
+子集化失败中断: \033[1;33m{errorStop}\033[0m
+使用工作目录字体：\033[1;33m{fontload}\033[0m
+''')
             else:
-                print('''子集化字体并封装
-搜索子目录(视频): \033[1;33m{4}\033[0m
-搜索子目录(字幕): \033[1;33m{5}\033[0m
-移除内挂字幕: \033[1;33m{0}\033[0m
-移除原有附件: \033[1;33m{1}\033[0m
-不封装字体: \033[1;33m{2}\033[0m
-严格字幕匹配: \033[1;33m{6}\033[0m
-媒体文件输出文件夹: \033[1;33m{3}\033[0m
-广兼容性子集化: \033[1;33m{8}\033[0m
-忽略字体所缺字: \033[1;33m{10}\033[0m
-子集化失败中断: \033[1;33m{7}\033[0m
-使用工作目录字体：\033[1;33m{9}\033[0m
-'''.format(rmAssIn, rmAttach, notfont, mkvout, v_subdir, s_subdir, matchStrict, errorStop, char_compatible, fontload, ignoreLost))
+                print(f'''子集化字体并封装
+搜索子目录(视频): \033[1;33m{v_subdir}\033[0m
+搜索子目录(字幕): \033[1;33m{s_subdir}\033[0m
+移除内挂字幕: \033[1;33m{rmAssIn}\033[0m
+移除原有附件: \033[1;33m{rmAttach}\033[0m
+不封装字体: \033[1;33m{notfont}\033[0m
+严格字幕匹配: \033[1;33m{matchStrict}\033[0m
+媒体文件输出文件夹: \033[1;33m{mkvout}\033[0m
+广兼容性子集化: \033[1;33m{char_compatible}\033[0m
+忽略字体所缺字: \033[1;33m{ignoreLost}\033[0m
+子集化失败中断: \033[1;33m{errorStop}\033[0m
+使用工作目录字体：\033[1;33m{fontload}\033[0m
+''')
             cpath = ''
             directout = False
             subonly = False
@@ -3722,9 +3744,9 @@ def cFontSubset(font_info):
                 if cpath == '':
                     print('没有输入，回到上级菜单')
                 elif not path.isabs(cpath):
-                    print('\033[1;31m[ERROR] 输入的必须是绝对路径！: \"{0}\"\033[0m'.format(cpath))
+                    print(f'\033[1;31m[ERROR] 输入的必须是绝对路径！: \"{cpath}\"\033[0m')
                 elif not path.exists(cpath):
-                    print('\033[1;31m[ERROR] 找不到路径: \"{0}\"\033[0m'.format(cpath))
+                    print(f'\033[1;31m[ERROR] 找不到路径: \"{cpath}\"\033[0m')
                 elif path.isfile(cpath):
                     testext = path.splitext(cpath)[1][1:].lower()
                     if testext in extlist:
@@ -3733,9 +3755,9 @@ def cFontSubset(font_info):
                         directout = False
                         subonly = True
                     else:
-                        print('\033[1;31m[ERROR] 扩展名不正确: \"{0}\"\033[0m'.format(cpath))
+                        print(f'\033[1;31m[ERROR] 扩展名不正确: \"{cpath}\"\033[0m')
                 elif not path.isdir(cpath):
-                    print('\033[1;31m[ERROR] 输入的应该是目录或媒体文件！: \"{0}\"\033[0m'.format(cpath))
+                    print(f'\033[1;31m[ERROR] 输入的应该是目录或媒体文件！: \"{cpath}\"\033[0m')
                 else:
                     directout = False
             # print(directout)
@@ -3857,7 +3879,7 @@ def cFontSubset(font_info):
 
 def cLicense():
     cls()
-    print('''AddSubFontMKV Python Remake Preview 23
+    print('''AddSubFontMKV Python Remake Preview 24
 
 Apache-2.0 License
 https://www.apache.org/licenses/
@@ -4105,11 +4127,17 @@ def cTextCodingTranscode():
         print('输出文件夹: \033[33;1m\"{}\"\033[0m'.format(outPath))
     os.system('pause')
 
+
+def commandInput():
+    '''计划中的命令行输入支持'''
+    pass
+
+
 no_mkvm = False
 no_cmdc = False
 mkvmv = ''
 ffmv = ''
-font_info = [{}, {}, {}, {}]
+font_info = [{}, {}, {}, {}, {}]
 
 def checkFF():
     '''检查ffmpeg和ffprobe可用性'''
@@ -4123,7 +4151,7 @@ def checkFF():
 def loadMain(reload: bool = False):
     global extlist, no_mkvm, no_cmdc, dupfont, mkvmv, font_info, fontin, langlist, ffmv, insteadFF
     # 初始化字体列表 和 mkvmerge 相关参数
-    os.system('title ASFMKV Python Remake Pre23 ^| (c) 2022-2024 yyfll ^| Apache-2.0')
+    os.system('title ASFMKV Python Remake Pre24 ^| (c) 2022-2024 yyfll ^| Apache-2.0')
     if not reload:
         if not o_fontload:
             font_list = getFontFileList(fontin)
@@ -4170,7 +4198,7 @@ def loadMain(reload: bool = False):
     if not len(ffmv) > 0:
         ffMessage = '\n[F] 检查并启用FFmpeg'
         ffSelect = 'F'
-    print('''ASFMKV Python Remake Pre23 | (c) 2022-2024 yyfll{0}{5}
+    print('''ASFMKV Python Remake Pre24 | (c) 2022-2024 yyfll{0}{5}
 字体名称数: [\033[1;33m{2}\033[0m]（{4}）
 请选择功能:
 [A] 列出字幕所用字体
@@ -4234,8 +4262,8 @@ def loadMain(reload: bool = False):
             appdata = os.getenv('APPDATA')
             fontCacheDir = path.join(appdata, 'ASFMKVpy')
             if not path.isdir(fontCacheDir): fontCacheDir = None
-            print('''字体信息重载
-缓存目录: \"\033[1;33m{}\033[0m\"
+            print(f'''字体信息重载
+缓存目录: \"\033[1;33m{fontCacheDir}\033[0m\"
 
 [0] 回到主菜单
 [1] 更新缓存
@@ -4243,7 +4271,7 @@ def loadMain(reload: bool = False):
 [3] 删除所有缓存文件并重载
 [4] 新增自定义字体目录并重载
 
-请选择:'''.format(fontCacheDir))
+请选择:''')
             work2 = os.system('choice /C 01234')
 
             def reloadFont(usingCache: bool = True):
