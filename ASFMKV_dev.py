@@ -1889,7 +1889,7 @@ def assFontSubset(assfont: dict, fontdir: str, allTTF: bool = False):
             showOutChars = ' '.join([(c if c.isprintable() else 'U+' + hex(ord(c))[2:].rjust(4, '0').upper()) for c in out_of_range])
 
             if ignoreLost:
-                print('\033[1;31m[WARNING] 已忽略不在字体中的字符 {}\033[0m'.format(showOutChars))
+                print('\033[1;31m[WARNING] 已忽略不在字体中的字符: {}\033[0m'.format(showOutChars))
             else:
                 print('\033[1;31m[ERROR] 以下字符不在字体\"{1}\"内\033[0m\n\"{0}\"\n\033[1;31m[ERROR] 以上字符不在字体\"{1}\"内\033[0m'.format(showOutChars, s[3]))
                 print('\033[1;31m[ERROR] 已停止子集化，如果您想要强行子集化，请启用ignoreLost\033[0m')
@@ -2181,7 +2181,7 @@ def getSubName(v: str, sub: str) -> tuple[str, str]:
     bVideo = basenameNoEXT(v)
     return sub, bSub[bSub.find(bVideo) + len(bVideo):]
 
-def ffASFMKV(file: str, outfile: str = '', asslangs: list = [], asspaths: list = [], fontpaths: list = [], forceSubTrack: str = '?') -> int:
+def ffASFMKV(file: str, outfile: str = '', asslangs: list = [], asspaths: list = [], fontpaths: list = [], forceSubTrack: str = '?', makeMKS: bool = False) -> int:
     """
 ffASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要ffmpeg、ffprobe命令行支持
 
@@ -2203,46 +2203,55 @@ ffASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要ffm
     elif not path.exists(file) or not path.isfile(file):
         return 4
     if outfile is None: outfile = ''
+
+    outExt = '.mkv'
+    if makeMKS:
+        outExt = '.mks'
+
     if outfile == '' or not path.exists(path.dirname(outfile)) or path.dirname(outfile) == path.dirname(file):
-        outfile = '.muxed'.join([path.splitext(file)[0], '.mkv'])
-    outfile = path.splitext(outfile)[0] + '.mkv'
+        outfile = '.muxed'.join([path.splitext(file)[0], outExt])
+    outfile = path.splitext(outfile)[0] + outExt
     if path.exists(outfile):
         checkloop = 1
         while path.exists('#{0}'.format(checkloop).join(path.splitext(outfile))):
             checkloop += 1
-        outfile = '#{0}'.format(checkloop).join([path.splitext(outfile)[0], '.mkv'])
+        outfile = '#{0}'.format(checkloop).join([path.splitext(outfile)[0], outExt])
 
-    rawIdx = json.loads(os.popen('ffprobe -print_format json -show_streams -hide_banner -v 0 -i \"{}\"'.format(file), mode='r').read())
-    firstIdx = len(rawIdx['streams'])
     ffargs = []
     metaList = []
     mapList = []
     copyList = []
-    
-    for f in rawIdx['streams']:
-        if f['codec_type'] == 'video':
-            if '-map 0:v' not in mapList:
-                mapList.append('-map 0:v')
-                copyList.append('-c:v copy')
-        elif f['codec_type'] == 'audio':
-            if '-map 0:a' not in mapList:
-                mapList.append('-map 0:a')
-                copyList.append('-c:a copy')
-        elif f['codec_type'] == 'attachment':
-            if not rmAttach:
-                if '-map 0:t' not in mapList:
-                    mapList.append('-map 0:t')
-                    copyList.append('-c:t copy')
-            else:
-                firstIdx -= 1
-        elif f['codec_type'] == 'subtitle':
-            if rmAssIn: 
-                firstIdx -= 1
-            elif '-map 0:s' not in mapList:
-                mapList.append('-map 0:s')
-            if not rmAssIn and f['disposition']['default'] == 1:
-                copyList.append('-disposition:{} 0'.format(f['index']))
-    ffargs.append('-i \"{}\"'.format(file))
+    firstIdx = 0
+
+    if not makeMKS:
+        rawIdx = json.loads(os.popen('ffprobe -print_format json -show_streams -hide_banner -v 0 -i \"{}\"'.format(file), mode='r').read())
+
+        firstIdx = len(rawIdx['streams'])
+
+        for f in rawIdx['streams']:
+            if f['codec_type'] == 'video':
+                if '-map 0:v' not in mapList:
+                    mapList.append('-map 0:v')
+                    copyList.append('-c:v copy')
+            elif f['codec_type'] == 'audio':
+                if '-map 0:a' not in mapList:
+                    mapList.append('-map 0:a')
+                    copyList.append('-c:a copy')
+            elif f['codec_type'] == 'attachment':
+                if not rmAttach:
+                    if '-map 0:t' not in mapList:
+                        mapList.append('-map 0:t')
+                        copyList.append('-c:t copy')
+                else:
+                    firstIdx -= 1
+            elif f['codec_type'] == 'subtitle':
+                if rmAssIn and not makeMKS: 
+                    firstIdx -= 1
+                elif '-map 0:s' not in mapList:
+                    mapList.append('-map 0:s')
+                if not rmAssIn and f['disposition']['default'] == 1:
+                    copyList.append('-disposition:{} 0'.format(f['index']))
+        ffargs.append('-i \"{}\"'.format(file))
   
     fn = path.splitext(path.basename(file))[0]
     metaList.append('-metadata:g title=\"{}\"'.format(fn))
@@ -2263,14 +2272,14 @@ ffASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要ffm
             
             if len(asslangs) > 0 and path.splitext(s)[1][1:].lower() not in ['idx']:
                 if assnote.lower() in asslangs:
-                    metadata.append('language=\"{}\"'.format(asslangs[assnote]))
+                    metadata.append('language=\"{}\"'.format(asslangs[assnote.lower()]))
 
             if len(metadata) > 0:
                 for m in metadata:
                     metaList.append('-metadata:s:{1} {0}'.format(m, firstIdx))
 
             ffargs.append('-i \"{}\"'.format(s))
-            mapList.append('-map {}'.format(i + 1))
+            mapList.append('-map {}'.format(i + 1 if not makeMKS else i))
 
             if not defaultSet and (assnote.lower() == forceSubTrack.lower() or forceSubTrack == '?'):
                 copyList.append('-disposition:{} default'.format(firstIdx))
@@ -2290,6 +2299,9 @@ ffASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要ffm
                                                                               extMime[path.splitext(s)[1][1:].lower()], firstIdx))
             ffargs.append('-attach \"{}\"'.format(s))
             firstIdx += 1
+    
+    if makeMKS: metaList.append('-f matroska')
+
     ffmr = os.system('ffmpeg {0} {3} {4} -c:s copy {2} \"{1}\"'.format(' '.join(ffargs), outfile, ' '.join(metaList), ' '.join(mapList), ' '.join(copyList)))
     
     if ffmr >= 1:
@@ -2320,7 +2332,7 @@ ffASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要ffm
     return ffmr
 
 
-def ASFMKV(file: str, outfile: str = '', asslangs: dict = {}, asspaths: list = [], fontpaths: list = [], forceSubTrack: str = '?') -> int:
+def ASFMKV(file: str, outfile: str = '', asslangs: dict = {}, asspaths: list = [], fontpaths: list = [], forceSubTrack: str = '?', makeMKS: bool = False) -> int:
     """
 ASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要mkvmerge命令行支持
 
@@ -2344,18 +2356,27 @@ ASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要mkvme
     elif not path.exists(file) or not path.isfile(file):
         return 4
     if outfile is None: outfile = ''
+
+    outExt = '.mkv'
+    if makeMKS:
+        outExt = '.mks'
+
     if outfile == '' or not path.exists(path.dirname(outfile)) or path.dirname(outfile) == path.dirname(file):
-        outfile = '.muxed'.join([path.splitext(file)[0], '.mkv'])
-    outfile = path.splitext(outfile)[0] + '.mkv'
+        outfile = '.muxed'.join([path.splitext(file)[0], outExt])
+    outfile = path.splitext(outfile)[0] + outExt
     if path.exists(outfile):
         checkloop = 1
         while path.exists('#{0}'.format(checkloop).join(path.splitext(outfile))):
             checkloop += 1
-        outfile = '#{0}'.format(checkloop).join([path.splitext(outfile)[0], '.mkv'])
+        outfile = '#{0}'.format(checkloop).join([path.splitext(outfile)[0], outExt])
+
     mkvargs = []
-    if rmAssIn: mkvargs.append('-S')
-    if rmAttach: mkvargs.append('-M')
-    mkvargs.extend(['(', file, ')'])
+
+    if not makeMKS:
+        if rmAssIn: mkvargs.append('-S')
+        if rmAttach: mkvargs.append('-M')
+        mkvargs.extend(['(', file, ')'])
+    
     fn = path.splitext(path.basename(file))[0]
     if len(asspaths) > 0:
         defaultSet = False
@@ -2825,7 +2846,7 @@ def namePosition(files: list):
 
 
 def main(font_info: list, asspath: list, outdir: list = ['', '', ''], mux: bool = False, vpath: str = '',
-         asslangs: dict = {}, FFmuxer: int = 0, fontline: int = -1, forceSubTrack: str = '?'):
+         asslangs: dict = {}, FFmuxer: int = 0, fontline: int = -1, forceSubTrack: str = '?', makeMKS: bool = False):
     """
 主函数，负责调用各函数走完完整的处理流程
 
@@ -2934,10 +2955,10 @@ def main(font_info: list, asspath: list, outdir: list = ['', '', ''], mux: bool 
                 outdir[2] = path.dirname(outdir[2])
         if FFmuxer == 1:
             mkvr = ffASFMKV(vpath, path.join(outdir[2], path.splitext(path.basename(vpath))[0] + '.mkv'),
-                      asslangs=asslangs, asspaths=newasspath, fontpaths=list(set([f[0] for f in newfont_name.values()])), forceSubTrack=forceSubTrack)
+                      asslangs=asslangs, asspaths=newasspath, fontpaths=list(set([f[0] for f in newfont_name.values()])), forceSubTrack=forceSubTrack, makeMKS=makeMKS)
         elif FFmuxer == 0:
             mkvr = ASFMKV(vpath, path.join(outdir[2], path.splitext(path.basename(vpath))[0] + '.mkv'),
-                      asslangs=asslangs, asspaths=newasspath, fontpaths=list(set([f[0] for f in newfont_name.values()])), forceSubTrack=forceSubTrack)
+                      asslangs=asslangs, asspaths=newasspath, fontpaths=list(set([f[0] for f in newfont_name.values()])), forceSubTrack=forceSubTrack, makeMKS=makeMKS)
         else:
             mkvr = 0
         if not notfont:
@@ -3449,10 +3470,10 @@ def getSubsLangsV2(media_ass: dict) -> list:
                     elif rudeSubN2L:
                         for k in subName2Lang.keys():
                             if k.lstrip('.') in i:
-                                lang = subName2Lang[i]
+                                lang = subName2Lang[k]
                                 autoGet = True
                                 break
-                else:
+                if not autoGet:
                     if no_mkvm and len(translationLang) > 0:
                         searchLang = '仅本地语言搜索'
                     elif no_mkvm:
@@ -3819,13 +3840,21 @@ def cFontSubset(font_info):
                         sublangs = None
                         sublangs = {}
                         forceSubTrack = '?'
+                        makeMKSq = False
                         muxer = 0
                         cls()
                         if domux: 
                             print('您需要为字幕轨道添加语言信息吗？')
                             if os.system('choice') == 1:
                                 sublangs = getSubsLangsV2(media_ass)
+                            
+                            cls()
                             forceSubTrack = getForceSub(media_ass)
+
+                            cls()
+                            print('您要封装为外置MKS文件吗？')
+                            if os.system('choice') == 1:
+                                makeMKSq = True
                         # print(media_ass)
                         if work == 21 or (work == 2 and no_mkvm):
                             muxer = 1
@@ -3844,7 +3873,7 @@ def cFontSubset(font_info):
                                                                 outdir=[assout_cache, fontout_cache, mkvout_cache],
                                                                 vpath=k,
                                                                 asslangs=sublangs,
-                                                                FFmuxer = muxer, forceSubTrack=forceSubTrack)
+                                                                FFmuxer = muxer, forceSubTrack = forceSubTrack, makeMKS = makeMKSq)
                             if mkvr != -2:
                                 showMessageSubset(newasspaths, newfont_name)
                             else:
