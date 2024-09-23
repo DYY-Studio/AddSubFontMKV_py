@@ -201,12 +201,6 @@ lcidfil = {
     6: 'utf-16-be'
 }}
 
-# 将fontTools文本编解码模块中gb2312等效参数改为gbk
-fontTools.misc.encodingTools._encodingMap[3][3] = 'gbk'
-fontTools.misc.encodingTools._encodingMap[1][25] = 'gbk'
-
-# lcidfil = fontTools.misc.encodingTools._encodingMap
-
 # 以下环境变量不应更改
 # 编译 style行 搜索用正则表达式
 style_read = re.compile('.*\nStyle:.*')
@@ -1881,7 +1875,7 @@ def assFontSubset(assfont: dict, fontdir: str, allTTF: bool = False):
         # print(fontdir, path.exists(path.dirname(fontdir)), path.exists(fontdir))
         fontname = re.sub(cillegal, '_', s[4])
         subfontpath = path.join(fontdir, fontname + subfontext)
-        print('\r\033[1;32m[{0}/{1}]\033[0m \033[1m正在子集化…… \033[0m'.format(kip, lk), end='')
+        print('\033[1;32m[{0}/{1}]\033[0m \033[1m正在子集化……{2}\033[0m'.format(kip, lk, s[4]))
         if char_compatible:
             if re.search(r'[0-9]', s[2]):
                 s[2] = '{0}{1}'.format(re.sub(r'[0-9]', '', s[2].replace('\n', '')), '0123456789')
@@ -1891,10 +1885,13 @@ def assFontSubset(assfont: dict, fontdir: str, allTTF: bool = False):
         gfs, gfs_uni, out_of_range = charExistCheck(s[0], s[1], s[2])
         gfs = gfs.lstrip(',')
         if len(out_of_range) > 0:
+
+            showOutChars = ' '.join([(c if c.isprintable() else 'U+' + hex(ord(c))[2:].rjust(4, '0').upper()) for c in out_of_range])
+
             if ignoreLost:
-                print('\n\033[1;31m[WARNING] 已忽略不在字体中的字符\033[0m')
+                print('\033[1;31m[WARNING] 已忽略不在字体中的字符 {}\033[0m'.format(showOutChars))
             else:
-                print('\n\033[1;31m[ERROR] 以下字符不在字体\"{1}\"内\033[0m\n\"{0}\"\n\033[1;31m[ERROR] 以上字符不在字体\"{1}\"内\033[0m'.format(out_of_range, s[3]))
+                print('\033[1;31m[ERROR] 以下字符不在字体\"{1}\"内\033[0m\n\"{0}\"\n\033[1;31m[ERROR] 以上字符不在字体\"{1}\"内\033[0m'.format(showOutChars, s[3]))
                 print('\033[1;31m[ERROR] 已停止子集化，如果您想要强行子集化，请启用ignoreLost\033[0m')
                 return None
         if len(gfs) == 0:
@@ -3163,8 +3160,11 @@ def cListAssFont(font_info):
                             if char_lost:
                                 print('\033[1;33m正在检查:\033[0m \033[1m{0}\033[0m'.format(assfont[s][1]))
                                 a, b, out_of_range = charExistCheck(s[0], int(s[1]), assfont[s][0])
+
+                                showOutChars = ' '.join([(c if c.isprintable() else 'U+' + hex(ord(c))[2:].rjust(4, '0').upper()) for c in out_of_range])
+
                                 if len(out_of_range) > 0:
-                                    out_of_ranges[s] = [str(len(out_of_range)), out_of_range.strip(' ')]
+                                    out_of_ranges[s] = [str(len(out_of_range)), showOutChars]
                                 elif len(a) == 0:
                                     print('\033[1;31m检查失败:\033[0m \033[1m{0}\033[0m'.format(assfont[s][1]))
                                     out_of_ranges[s] = ['N', '']
