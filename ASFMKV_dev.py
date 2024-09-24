@@ -374,6 +374,11 @@ changeOnly: 是否只输出字体在行中发生变化的行（带有 \\fn \\r \
     events = assInfo['Events']
     lines = {}
 
+    reVector = re.compile(r'\{.*?\\p[1-9]\d*.*?\}([\s\S]*?)\{.*?\\p0.*?\}')
+    reVector2 = re.compile(r'\{.*?\\p[1-9]\d*.*?\}')
+    reEffect = re.compile(r'\{.*?(?:\\b[1-9]00|\\b[0-1]|\\i[0-1]|\\fn|\\r).*?\}')
+    reIBon = re.compile(r'\\b[1-9]00|\\b[0-1]|\\i[0-1]|\\fn|\\r')
+
     for i in range(0, len(events)):
         if events[i]['Event'] != 'Dialogue':
             continue
@@ -382,8 +387,8 @@ changeOnly: 是否只输出字体在行中发生变化的行（带有 \\fn \\r \
         textremain = ''
         # 矢量绘图处理，如果发现有矢量表达，从字符串中删除这一部分
         # 这一部分的工作未经详细验证，作用也不大
-        if re.search(r'\{.*?\\p[1-9]\d*.*?\}([\s\S]*?)\{.*?\\p0.*?\}', eventftext) is not None:
-            vecpos = re.findall(r'\{.*?\\p[1-9]\d*.*?\}[\s\S]*?\{.*?\\p0.*?\}', eventftext)
+        if re.search(reVector, eventftext) is not None:
+            vecpos = re.findall(reVector, eventftext)
             nexts = 0
             for s in vecpos:
                 vecfind = eventftext.find(s)
@@ -391,9 +396,9 @@ changeOnly: 是否只输出字体在行中发生变化的行（带有 \\fn \\r \
                 nexts = vecfind
                 s = re.sub(r'\\p\d+', '', re.sub(r'}.*?{', '}{', s))
                 textremain += s
-        elif re.search(r'\{.*?\\p[1-9]\d*.*?\}', eventftext) is not None:
+        elif re.search(reVector2, eventftext) is not None:
             eventftext = re.sub(r'\\p\d+', '',
-                                eventftext[:re.search(r'\{.*?\\p[1-9]\d*.*?\}', eventftext).span()[0]])
+                                eventftext[:re.search(reVector2, eventftext).span()[0]])
         if len(textremain) > 0:
             eventftext = textremain
         eventfont = assInfo['Styles'].get(events[i]['Style'])
@@ -410,7 +415,7 @@ changeOnly: 是否只输出字体在行中发生变化的行（带有 \\fn \\r \
         lfi = eventfont['Italic']
         lfb = eventfont['Bold']
         # 首先查找蕴含有启用粗体/斜体标记的特效标签
-        if re.search(r'\{.*?(?:\\b[1-9]00|\\b[0-1]|\\i[0-1]|\\fn|\\r).*?\}', eventftext) is not None:
+        if re.search(reEffect, eventftext) is not None:
             lastfind = 0
             allfind = re.findall(r'\{.*?\}', eventftext)
             eventftext2 = eventftext
@@ -418,7 +423,7 @@ changeOnly: 是否只输出字体在行中发生变化的行（带有 \\fn \\r \
             # 然后分别确认该特效标签的适用范围，以准确将字体子集化b
             for sti in range(0, len(allfind)):
                 st = allfind[sti]
-                ibopen = re.search(r'\\b[1-9]00|\\b[0-1]|\\i[0-1]|\\fn|\\r', st)
+                ibopen = re.search(reIBon, st)
                 if ibopen is not None:
                     stfind = eventftext2.find(st)
                     addbold = lfb
@@ -3946,7 +3951,7 @@ def cFontSubset(font_info):
 
 def cLicense():
     cls()
-    print('''AddSubFontMKV Python Remake Preview 24
+    print('''AddSubFontMKV Python Remake Preview 25
 
 Apache-2.0 License
 https://www.apache.org/licenses/
@@ -4218,7 +4223,7 @@ def checkFF():
 def loadMain(reload: bool = False):
     global extlist, no_mkvm, no_cmdc, dupfont, mkvmv, font_info, fontin, langlist, ffmv, insteadFF
     # 初始化字体列表 和 mkvmerge 相关参数
-    os.system('title ASFMKV Python Remake Pre24 ^| (c) 2022-2024 yyfll ^| Apache-2.0')
+    os.system('title ASFMKV Python Remake Pre25 ^| (c) 2022-2024 yyfll ^| Apache-2.0')
     if not reload:
         if not o_fontload:
             font_list = getFontFileList(fontin)
@@ -4265,7 +4270,7 @@ def loadMain(reload: bool = False):
     if not len(ffmv) > 0:
         ffMessage = '\n[F] 检查并启用FFmpeg'
         ffSelect = 'F'
-    print('''ASFMKV Python Remake Pre24 | (c) 2022-2024 yyfll{0}{5}
+    print('''ASFMKV Python Remake Pre25 | (c) 2022-2024 yyfll{0}{5}
 字体名称数: [\033[1;33m{2}\033[0m]（{4}）
 请选择功能:
 [A] 列出字幕所用字体
