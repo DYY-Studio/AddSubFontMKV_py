@@ -410,17 +410,17 @@ changeOnly: 是否只输出字体在行中发生变化的行（带有 \\fn \\r \
         lfi = eventfont['Italic']
         lfb = eventfont['Bold']
         # 首先查找蕴含有启用粗体/斜体标记的特效标签
-        if re.search(r'\{.*?(?:\\b|\\i|\\fn|\\r).*?\}', eventftext) is not None:
+        if re.search(r'\{.*?(?:\\b[1-9]00|\\b[0-1]|\\i[0-1]|\\fn|\\r).*?\}', eventftext) is not None:
             lastfind = 0
             allfind = re.findall(r'\{.*?\}', eventftext)
             eventftext2 = eventftext
             # 在所有特效标签中寻找
-            # 然后分别确认该特效标签的适用范围，以准确将字体子集化
+            # 然后分别确认该特效标签的适用范围，以准确将字体子集化b
             for sti in range(0, len(allfind)):
                 st = allfind[sti]
-                ibopen = re.search(r'\\b|\\i|\\fn|\\r', st)
+                ibopen = re.search(r'\\b[1-9]00|\\b[0-1]|\\i[0-1]|\\fn|\\r', st)
                 if ibopen is not None:
-                    stfind = eventftext2.find(st) + lastfind
+                    stfind = eventftext2.find(st)
                     addbold = lfb
                     additalic = lfi
                     # 不管有没有 \r 标签，先获取了再说
@@ -809,16 +809,16 @@ fontList: {(字体名<str>, 斜体<int>, 粗体<int>): '字符<str>'}
     for i in eventSplit.keys():
         for l in eventSplit[i]:
             fn = l['Fontname'].lstrip('@')
-            l['Text'] = re.sub(r'\{.*?\\.*?\}', '', l['Text'])
+            text = re.sub(r'\{.*?\\.*?\}', '', l['Text'])
             if len(assInfo['Subset']) > 0 and fn in assInfo['Subset']:
                 fn = assInfo['Subset'][fn]
             flIndex = (fn, abs(int(l['Italic'])), abs(int(l['Bold'])))
             if flIndex in fontList:
-                for char in set(l['Text']):
+                for char in set(text):
                     if char not in fontList[flIndex]:
                         fontList[flIndex] += char
             else:
-                fontList[flIndex] = ''.join(set(l['Text']))
+                fontList[flIndex] = ''.join(set(text))
     
     return fontList
 
@@ -1138,6 +1138,7 @@ def outputSameLength(s: str) -> str:
 
 
 # 当前字体缓存版本，小于该版本的字体缓存会被删除重建
+# Pre24：2
 currentFontCacheVer = 2
 
 # font_info 列表结构
@@ -1910,34 +1911,28 @@ def assFontSubset(assfont: dict, fontdir: str, allTTF: bool = False):
         else:
             subsetarg = [s[0], '--glyphs={0}'.format(gfs), '--output-file={0}'.format(subfontpath), '--font-number={0}'.format(s[1]),
             '--passthrough-tables', '--name-legacy', '--legacy-cmap', '--glyph-names', '--recommended-glyphs', '--ignore-missing-glyphs']
-        # else:
-        #     print('\n\033[0;32m[CHECK] \"{0}\"已通过字符完整性检查\033[0m'.format(s[3]))
 
         try:
             subset.main(subsetarg)
-        # except PermissionError:
-        #     print('\n\033[1;31m[ERROR] 文件\"{0}\"访问失败\033[0m'.format(path.basename(subfontpath)))
-        #     continue
         except:
-            # print('\033[1;31m[ERROR] 失败字符串: \"{0}\" \033[0m'.format(s[2]))
+
             print('\n\033[1;31m[ERROR] {0}\033[0m'.format(sys.exc_info()))
             if errorStop:
                 print('\033[1;31m[WARNING] 字体\"{0}\"子集化失败，强制终止批量处理\033[0m'.format(path.basename(s[0])))
                 return None
             print('\033[1;31m[WARNING] 字体\"{0}\"子集化失败，将会保留完整字体\033[0m'.format(path.basename(s[0])))
-            # crcnewf = ''.join([path.splitext(subfontpath)[0], fontext])
-            # shutil.copy(s[0], crcnewf)
+
             ttLib.TTFont(s[0], lazy=False, fontNumber=int(s[1])).save(subfontpath, False)
             subfontcrc = None
+
             for si in s[5]:
                 for si3 in s[3].split("|"):
                     newfont_name[si3, si[0], si[1]] = [crcnewf, subfontcrc]
             continue
-        # os.system('pyftsubset {0}'.format(' '.join(subsetarg)))
+
         if path.exists(subfontpath):
             subfontcrc = hex(zlib.crc32((gfs + s[4]).encode('utf-8', 'replace')))[2:].upper()
             if len(subfontcrc) < 8: subfontcrc = '0' + subfontcrc
-            # print('CRC32: {0} \"{1}\"'.format(subfontcrc, path.basename(s[0])))
 
             rawf = ttLib.TTFont(s[0], lazy=True, fontNumber=int(s[1]))
             newf = ttLib.TTFont(subfontpath, lazy=False)
@@ -2093,11 +2088,10 @@ def assFontChange(newfont_name: dict, asspath: str, assInfo: dict, splitEvents: 
         
         if len(splitEvents) > 0:
 
-            # print('正在处理fn标签......')
+            # 处理fn标签
             # fn_lines: 带有fn标签的行数与该行的完整特效标签，一项一个 [ [行数, { 标签1 : ( ASS内部字体名称, Italic, Bold )}], ... ]
           
             for fnLine in splitEvents.keys():
-                if len(splitEvents[fnLine]) == 1: continue
                 for l in splitEvents[fnLine]:
                     fname = l['Fontname'].lstrip('@')
                     #if len(fname) > 0 and not used_nf_name[fname.upper()][1] is None:
@@ -2200,7 +2194,7 @@ ffASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要ffm
         return 4
     elif file == '':
         return 4
-    elif not path.exists(file) or not path.isfile(file):
+    elif (not path.exists(file) or not path.isfile(file)) and not makeMKS:
         return 4
     if outfile is None: outfile = ''
 
@@ -2310,7 +2304,7 @@ ffASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要ffm
         try:
             shutil.move('ffreport_cache.log', '{0}.{1}.log'.format(path.splitext(file)[0], datetime.now().strftime('%Y-%m%d-%H%M-%S_%f')))
         except:
-            print('\033[1;33m[ERROR] \"ffreport_cache.log\"移动失败\033[0m')
+            print('\033[1;33m[WARNING] \"ffreport_cache.log\"移动失败\033[0m')
     elif not notfont:
         for p in asspaths:
             print('\033[1;32m封装成功: \033[1;37m\"{0}\"\033[0m'.format(p))
@@ -2318,13 +2312,13 @@ ffASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要ffm
                 try:
                     os.remove(p)
                 except:
-                    print('\033[1;33m[ERROR] 文件\"{0}\"删除失败\033[0m'.format(p))
+                    print('\033[1;33m[WARNING] 文件\"{0}\"删除失败\033[0m'.format(p))
         for f in fontpaths:
             print('\033[1;32m封装成功: \033[1;37m\"{0}\"\033[0m'.format(f))
             try:
                 os.remove(f[0])
             except:
-                print('\033[1;33m[ERROR] 文件\"{0}\"删除失败\033[0m'.format(f))
+                print('\033[1;33m[WARNING] 文件\"{0}\"删除失败\033[0m'.format(f))
         print('\033[1;32m输出成功:\033[0m \033[1m\"{0}\"\033[0m'.format(outfile))
     else:
         print('\033[1;32m输出成功:\033[0m \033[1m\"{0}\"\033[0m'.format(outfile))
@@ -2353,7 +2347,7 @@ ASFMKV，将媒体文件、字幕、字体封装到一个MKV文件，需要mkvme
         return 4
     elif file == '':
         return 4
-    elif not path.exists(file) or not path.isfile(file):
+    elif (not path.exists(file) or not path.isfile(file)) and not makeMKS:
         return 4
     if outfile is None: outfile = ''
 
@@ -2846,7 +2840,7 @@ def namePosition(files: list):
 
 
 def main(font_info: list, asspath: list, outdir: list = ['', '', ''], mux: bool = False, vpath: str = '',
-         asslangs: dict = {}, FFmuxer: int = 0, fontline: int = -1, forceSubTrack: str = '?', makeMKS: bool = False):
+         asslangs: dict = {}, FFmuxer: int = 0, forceSubTrack: str = '?', makeMKS: bool = False):
     """
 主函数，负责调用各函数走完完整的处理流程
 
@@ -3653,6 +3647,10 @@ def cFontSubset(font_info):
 ''')
         work = os.system(f'choice /M 请输入 /C AC1234567890UVWXYZLB{showFFKey}')
 
+        # 01：mkvmerge 封装
+        # 20：ASS/SSA 内嵌
+        # 21：FFmpeg 封装
+
         if work == 2 and (no_mkvm and not insteadFF):
 
             print('[ERROR] 在您的系统中找不到 mkvmerge 或 ffmpeg, 该功能不可用')
@@ -3759,6 +3757,7 @@ def cFontSubset(font_info):
             directout = False
             subonly = False
             subonlyp = []
+            subonlyv = ''
             while not path.exists(cpath) and not directout:
                 directout = True
                 cpath = input('不输入任何值 直接回车回到上一页面\n请输入文件或目录路径: ').strip('\" ')
@@ -3783,7 +3782,9 @@ def cFontSubset(font_info):
                     directout = False
             # print(directout)
             medias = []
+            makeMKSq = False
             if not directout:
+
                 if path.isfile(cpath):
                     if not subonly:
                         medias = [[path.splitext(path.basename(cpath))[0], cpath]]
@@ -3791,8 +3792,10 @@ def cFontSubset(font_info):
                         subonlyp = [(path.splitext(path.basename(cpath))[0], cpath)]
                     cpath = path.dirname(cpath)
                 else:
+
                     if work != 20: medias = getFileList(cpath, extlist, v_subdir)
                     else: medias = []
+
                     if len(medias) == 0:
                         subonlyp = getFileList(cpath, ['ass', 'ssa'], s_subdir)
                         if work == 20:
@@ -3800,12 +3803,45 @@ def cFontSubset(font_info):
                         elif len(subonlyp) > 0:
                             cls()
                             print('\033[1;33m[WARNING]\033[0m')
-                            print('您输入的目录下只有字幕而无视频，每个字幕都将被当做单独对象处理\n若是同一话有多个字幕，这话将会有多套子集化字体。')
-                            if os.system('choice /M \"即便如此，您仍要继续吗？\"') == 1:
-                                subonly = True
-                            else:
-                                print('\n已终止运行')
-                                directout = True
+                            print(
+'''您输入的目录下只有字幕而无视频，需要输入文件名规则才可进行下一步。
+请将字幕对应的视频文件名中不统一的部分替换为通配符\"\033[1;33m*\033[0m\"，以便匹配视频文件名
+例如字幕：\"[dmhy][ARIA_The_ANIMATION][\033[1;33m01\033[0m][DVDRIP][AVC_AC3][\033[1;33mF49E85D5\033[0m].sc.ass\"
+需要输入：\"[dmhy][ARIA_The_ANIMATION][\033[1;33m*\033[0m][DVDRIP][AVC_AC3][\033[1;33m*\033[0m]\"''')
+
+                            trying = 0
+                            while(len(subonlyv) == 0):
+                                subonlyv = input('视频文件名规则: ').strip(' ')
+                                if len(subonlyv) == 0:
+                                   trying+=1
+                                else:
+                                    if os.system('choice /M \"确定吗？\"') != 1:
+                                        subonly = True
+                                        directout = True
+                                    else:
+                                        subonlyv = re.escape(subonlyv).replace('\*', '.*?')
+                                        subonlyv_re = re.compile(subonlyv)
+                                        
+                                        svNameFound = {}
+                                        for fn, fp in subonlyp:
+                                            svName = re.search(subonlyv_re, fn).group()
+                                            if svName:
+                                                mediaTuple = (svName, path.join(path.dirname(fp), svName + '.mp4'))
+                                                if not mediaTuple in svNameFound:
+                                                    svNameFound[mediaTuple] = True
+                                                    medias.append(mediaTuple)
+                                        svNameFound.clear()
+                                        
+                                        if len(medias) > 0:
+                                            subonlyp.clear()
+                                            subonly = False
+                                            makeMKSq = True
+                                        else:
+                                            print('\033[1;31m[ERROR] 文件名规则有误：匹配失败\033[0m')
+                                            directout = True
+
+                                if trying >= 3:
+                                    directout = True
                         else:
                             print('\033[1;31m[ERROR] 路径下找不到字幕\033[0m')
                             directout = True
@@ -3835,12 +3871,13 @@ def cFontSubset(font_info):
                 if work in [2, 21]: domux = True
 
                 if len(medias) > 0:
+
                     media_ass = getSubtitles(cpath, medias)
-                    if len(media_ass.values()) > 0:
+
+                    if len(media_ass) > 0:
                         sublangs = None
                         sublangs = {}
                         forceSubTrack = '?'
-                        makeMKSq = False
                         muxer = 0
                         cls()
                         if domux: 
@@ -3851,10 +3888,11 @@ def cFontSubset(font_info):
                             cls()
                             forceSubTrack = getForceSub(media_ass)
 
-                            cls()
-                            print('您要封装为外置MKS文件吗？')
-                            if os.system('choice') == 1:
-                                makeMKSq = True
+                            if not makeMKSq:
+                                cls()
+                                print('您要封装为外置MKS文件吗？')
+                                if os.system('choice') == 1:
+                                    makeMKSq = True
                         # print(media_ass)
                         if work == 21 or (work == 2 and no_mkvm):
                             muxer = 1
