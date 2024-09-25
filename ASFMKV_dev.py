@@ -811,10 +811,12 @@ fontList: {(字体名<str>, 斜体<int>, 粗体<int>): '字符<str>'}
     '''
     fontList = {}
 
+    effectRe = re.compile(r'\{.*?\\.*?\}')
+
     for i in eventSplit.keys():
         for l in eventSplit[i]:
             fn = l['Fontname'].lstrip('@')
-            text = re.sub(r'\{.*?\\.*?\}', '', l['Text'])
+            text = re.sub(effectRe, '', l['Text'])
             if len(assInfo['Subset']) > 0 and fn in assInfo['Subset']:
                 fn = assInfo['Subset'][fn]
             flIndex = (fn, abs(int(l['Italic'])), abs(int(l['Bold'])))
@@ -2091,6 +2093,8 @@ def assFontChange(newfont_name: dict, asspath: str, assInfo: dict, splitEvents: 
         for k in used_nf_name2.keys():
             used_nf_name[(k[0].upper(), k[1], k[2])] = used_nf_name2[k]
         
+        fnFound = re.compile(r'\{.*?\\fn.*?\}')
+
         if len(splitEvents) > 0:
 
             # 处理fn标签
@@ -2114,12 +2118,10 @@ def assFontChange(newfont_name: dict, asspath: str, assInfo: dict, splitEvents: 
 
                         if replaceFn is not None:
                             if replaceFn[1] is not None:
-                                fnTags = re.findall(r'\{.*?\\fn.*?\}', l['Text'])
+                                fnTags = re.findall(fnFound, l['Text'])
                                 for t in fnTags:
-                                    l['Text'] = l['Text'].replace(t, t.replace(l['Fontname'], replaceFn[1])) 
+                                    assInfo['Events'][fnLine]['Text'] = assInfo['Events'][fnLine]['Text'].replace(t, t.replace(l['Fontname'], replaceFn[1]))
                                 l['Fontname'] = replaceFn[1]
-
-                assInfo['Events'][fnLine]['Text'] = ''.join([v['Text'] for v in splitEvents[fnLine]])
 
         for k in used_nf_name2:
             assInfo['Subset'][newfont_name[k][1]] = k[0].split('|')[0]
