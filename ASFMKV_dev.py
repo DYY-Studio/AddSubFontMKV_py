@@ -378,12 +378,16 @@ changeOnly: 是否只输出字体在行中发生变化的行（带有 \\fn \\r \
     reVector2 = re.compile(r'\{.*?\\p[1-9]\d*.*?\}')
     reEffect = re.compile(r'\{.*?(?:\\b[1-9]00|\\b[0-1]|\\i[0-1]|\\fn|\\r).*?\}')
     reIBon = re.compile(r'\\b[1-9]00|\\b[0-1]|\\i[0-1]|\\fn|\\r')
+    allTags = re.compile(r'\{.*?\}')
+    effectDel = re.compile(r'\{.*?\}|\\[nNhs]|\n')
+    findR = re.compile(r'\\r.*?[\\\}]')
+    findB = re.compile(r'\\b[7-9]00|\\b1')
+    findFn = re.compile(r'\\fn.*?[\\\}]')
 
     for i in range(0, len(events)):
         if events[i]['Event'] != 'Dialogue':
             continue
         eventftext = events[i]['Text']
-        effectDel = r'\{.*?\}|\\[nNhs]|\n'
         textremain = ''
         # 矢量绘图处理，如果发现有矢量表达，从字符串中删除这一部分
         # 这一部分的工作未经详细验证，作用也不大
@@ -417,7 +421,7 @@ changeOnly: 是否只输出字体在行中发生变化的行（带有 \\fn \\r \
         # 首先查找蕴含有启用粗体/斜体标记的特效标签
         if re.search(reEffect, eventftext) is not None:
             lastfind = 0
-            allfind = re.findall(r'\{.*?\}', eventftext)
+            allfind = re.findall(allTags, eventftext)
             eventftext2 = eventftext
             # 在所有特效标签中寻找
             # 然后分别确认该特效标签的适用范围，以准确将字体子集化b
@@ -429,7 +433,7 @@ changeOnly: 是否只输出字体在行中发生变化的行（带有 \\fn \\r \
                     addbold = lfb
                     additalic = lfi
                     # 不管有没有 \r 标签，先获取了再说
-                    rstylel = re.findall(r'\\r.*?[\\\}]', st)
+                    rstylel = re.findall(findR, st)
                     rfn = lfn
                     rfb = lfb
                     rfi = lfi
@@ -451,7 +455,7 @@ changeOnly: 是否只输出字体在行中发生变化的行（带有 \\fn \\r \
 
                     # 统一获取标签位置
                     pos_b1 = -1
-                    fbopen = re.findall(r'\\b[7-9]00|\\b1', st)
+                    fbopen = re.findall(findB, st)
                     if len(fbopen) > 0:
                         pos_b1 = st.rfind(fbopen[-1])
                     pos_b0 = max([st.rfind('\\b0'), st.rfind('\\b\\'), st.rfind('\\b}')])
@@ -479,7 +483,7 @@ changeOnly: 是否只输出字体在行中发生变化的行（带有 \\fn \\r \
 
                     # 处理 \fn 标签 和 \r 标签
                     if pos_fn > -1:
-                        fnf = re.findall(r'\\fn.*?[\\\}]', st)
+                        fnf = re.findall(findFn, st)
                         if len(fnf) > 0 and pos_fn > pos_r:
                             fnn = fnf[-1].split('\\')[1].rstrip('}')[2:].lstrip('@')
                             if len(fnn) == 0:
