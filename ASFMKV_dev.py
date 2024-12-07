@@ -116,6 +116,11 @@ notfont = False
 #   False  只要字幕文件名中有媒体文件名就行了，不管它在哪
 matchStrict = True
 # *************************************************************************
+# negativeTagDetect 消极标签匹配
+#   True   有{\xx}出现的{}才是标签
+#   False  一切{}均视为标签忽略
+negativeTagDetect = False
+# *************************************************************************
 # startQuiet 静默启动
 #   True   不显示字体重复、字体名称修正信息
 #   False  反之
@@ -812,7 +817,10 @@ fontList: {(字体名<str>, 斜体<int>, 粗体<int>): '字符<str>'}
     '''
     fontList = {}
 
-    effectRe = re.compile(r'\{.*?\\.*?\}')
+    if negativeTagDetect:  
+        effectRe = re.compile(r'\{.*?\\.*?\}')
+    else:
+        effectRe = re.compile(r'\{.*?\}')
 
     for i in eventSplit.keys():
         for l in eventSplit[i]:
