@@ -8,7 +8,6 @@
 
 # 调用库，请不要修改
 from typing import Optional
-import fontTools.misc.encodingTools
 from fontTools import ttLib, subset
 from chardet.universaldetector import UniversalDetector
 from chardet import detect
@@ -17,8 +16,6 @@ from os import path
 from colorama import init
 from datetime import datetime
 from enum import Enum
-
-#fontTools.misc.encodingTools.getEncoding()
 
 # 初始化环境变量
 # *************************************************************************
@@ -1152,37 +1149,102 @@ def outputSameLength(s: str) -> str:
 # Pre24：2
 currentFontCacheVer = 2
 
-# font_info 列表结构
-#   [ font_name, font_n_lower, font_family, warning_font, font_all ]
+class font_name_record():
+    ''':fontStyle: {\'[encoding]\'：\'[style]\'}'''
+    absPath: str
+    fontIndex: int
+    fontStyle: dict
+    isFontCollection: bool
+
+    def __init__(self, absPath: str, fontIndex: int, fontStyle: dict, isFontCollection: bool):
+        self.absPath = absPath
+        self.fontIndex = fontIndex
+        self.fontStyle = fontStyle
+        self.isFontCollection = isFontCollection
+
+class font_all_record():
+    font_name: dict
+    isItalic: bool
+    isBold: bool
+    font_style: dict
+    font_family: dict
+
+    def __init__(self, font_name: dict, isItalic: bool, isBold: bool, font_style: dict, font_family: dict):
+        self.font_name = font_name
+        self.isItalic = isItalic
+        self.isBold = isBold
+        self.font_style = font_style
+        self.font_family = font_family
+
+class font_family_index():
+    isItalic: bool
+    isBold: bool
+
+    def __init__(self, isItalic: bool, isBold: bool):
+        self.isItalic = isItalic
+        self.isBold = isBold
+
+class font_family_record():
+    font_names: list
+
+    def __init__(self, font_names: list):
+        self.font_names = font_names
+
+class font_info_c():
+    '''
+    字体信息集合
+
+    :0 font_name: 字体名称词典
+
+    { 字体名称：[ 字体绝对路径 , 字体索引 (仅用于TTC/OTC; 如果是TTF/OTF，默认为0) ] }
+
+    :1 font_n_lower: 字体小写名称与原始名称对应词典
+
+    :2 font_family: 字体家族词典
+    :3 warning_font: 老旧字体词典
+    :4 f_all: 字体完整信息词典
+
+    { 字体绝对路径：{ 字体索引：(字体名称(dict), 斜体, 粗体, 字体样式(dict), 字体家族名称(dict)) } }
+    '''
+    font_name: dict
+    font_n_lower: dict
+    font_family: dict
+    warning_font: dict
+    f_all: dict
+
+    def __init__(self, font_name: dict = {}, font_n_lower: dict = {}, font_family: dict = {}, warning_font: dict = {}, f_all: dict = {}):
+        self.font_name = font_name
+        self.font_n_lower = font_n_lower
+        self.font_family = font_family
+        self.warning_font = warning_font
+        self.f_all = f_all
+    
+    def getByIndex(self, index: int) -> dict:
+        '''与传统font_info: list兼容'''
+        if index not in range(0, 5): return None
+        else: return (self.font_name, self.font_n_lower, self.font_family, self.warning_font, self.f_all)[index]
+
 # font_name 词典结构
 #   { 字体名称 : [ 字体绝对路径 , 字体索引 (仅用于TTC/OTC; 如果是TTF/OTF，默认为0) ] }
 # font_all 字典结构
 #   { 字体绝对路径: { 字体索引: (字体名称(dict), 斜体, 粗体, 字体样式(dict), 字体家族名称(dict)) } }
 # dupfont 词典结构
 #   { 重复字体名称 : [ 字体1绝对路径, 字体2绝对路径, ... ] }
-def fontProgress(fl: list, font_info: list = [{}, {}, {}, {}, {}], overwrite: bool = False, usingCache: bool = True) -> list:
+def fontProgress(fl: list, font_info: font_info_c = font_info_c(), overwrite: bool = False, usingCache: bool = True) -> font_info_c:
     """
 字体处理部分
-
-需要输入
-  fl: 字体文件列表
-
-可选输入
-  f_n: 默认新建一个，可用于更新font_name
-
-将会返回
-  font_name: 字体内部名称与绝对路径的索引词典
-
-会对以下全局变量进行变更
-  dupfont: 重复字体的名称与其路径词典
-  font_n_lower: 字体全小写名称与其标准名称对应词典
+  :param fl: 字体文件列表
+  :param f_n: 默认新建一个，可用于更新font_name
+  :return font_name: 字体内部名称与绝对路径的索引词典
+  :return dupfont: 重复字体的名称与其路径词典
+  :return font_n_lower: 字体全小写名称与其标准名称对应词典
     """
     global dupfont, startQuiet
-    warning_font = font_info[3]
-    font_family = font_info[2]
-    font_n_lower = font_info[1]
-    f_n = font_info[0]
-    f_all = font_info[4]
+    warning_font = font_info.warning_font
+    font_family = font_info.font_family
+    font_n_lower = font_info.font_n_lower
+    f_n = font_info.font_name
+    f_all = font_info.f_all
 
     # 字体缓存所用词典
     # 格式为
@@ -1350,7 +1412,11 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, {}, {}], overwrite: bo
 
                     platfID = name.platformID
                     langID = name.langID
-                    encoding = lcidfil[platfID].get(langID, 'other')
+
+                    encoding = 'other'
+                    if platfID in lcidfil:
+                        encoding = lcidfil[platfID].get(langID, 'other')
+                    # encoding = name.getEncoding(default='utf-16-be')
 
                     c = ''
                     # 若 nameID 为 1，读取 NameRecord 的字体家族名称
@@ -1499,7 +1565,7 @@ def fontProgress(fl: list, font_info: list = [{}, {}, {}, {}, {}], overwrite: bo
 
     f_all.clear()
 
-    return [f_n, font_n_lower, font_family, warning_font, f_all]
+    return font_info
 
 
 # print(filelist)
@@ -1523,7 +1589,7 @@ def fnGetFromFamilyName(font_family: dict, fn: str, isitalic: int, isbold: int) 
         return fn
 
 
-def checkAssFont(fontlist: dict, font_info: list, fn_lines: list = [], onlycheck: bool = False, checkf: str = ''):
+def checkAssFont(fontlist: dict, font_info: font_info_c, fn_lines: list = [], onlycheck: bool = False, checkf: str = ''):
     """
 系统字体完整性检查，检查是否有ASS所需的全部字体，如果没有，则要求拖入
 
@@ -1543,11 +1609,11 @@ def checkAssFont(fontlist: dict, font_info: list, fn_lines: list = [], onlycheck
 
     # 从fontlist获取字体名称
     assfont = {}
-    font_name = font_info[0]
-    font_n_lower = font_info[1]
-    font_family = font_info[2]
-    warning_font = font_info[3]
-    f_all = font_info[4]
+    font_name = font_info.font_name
+    font_n_lower = font_info.font_n_lower
+    font_family = font_info.font_family
+    warning_font = font_info.warning_font
+    f_all = font_info.f_all
 
     ignoreLostFonts = noRequestFont
 
@@ -1655,7 +1721,7 @@ def checkAssFont(fontlist: dict, font_info: list, fn_lines: list = [], onlycheck
                 if warningStop:
                     print('\033[1;31m[WARNING] 请修复\"{0}\"，工作已中断\033[0m'.format(ss))
                     os.system('pause')
-                    return None, [font_name, font_n_lower, font_family, warning_font, f_all]
+                    return None, font_info
             if directout < 3:
                 # 如果找到，添加到assfont列表
                 font_path = font_name[ss][0]
@@ -1699,7 +1765,7 @@ def checkAssFont(fontlist: dict, font_info: list, fn_lines: list = [], onlycheck
                     #     assfont[dict_key] = [fontlist[s], s]
                 # print(assfont[dict_key])
         if directout >= 3:
-            return None, [font_name, font_n_lower, font_family, warning_font, f_all]
+            return None, font_info
     if len(fn_lines) > 0 and not onlycheck:
         fn_lines_cache = fn_lines
         for i in range(0, len(fn_lines_cache)):
@@ -1707,7 +1773,7 @@ def checkAssFont(fontlist: dict, font_info: list, fn_lines: list = [], onlycheck
             fi = s[1][s[1].keys()[0]]
             fn_lines[i] = [s[0], {s[1].keys()[0]: [fi[1], fnGetFromFamilyName(font_family, fi[1], fi[2], fi[3])]}]
     # print(assfont)
-    return assfont, [font_name, font_n_lower, font_family, warning_font, f_all]
+    return assfont, font_info
 
 
 # print('正在输出字体子集字符集')
@@ -2850,7 +2916,7 @@ def namePosition(files: list):
     return mStart, mEnd
 
 
-def main(font_info: list, asspath: list, outdir: list = ['', '', ''], mux: bool = False, vpath: str = '',
+def main(font_info: font_info_c, asspath: list, outdir: list = ['', '', ''], mux: bool = False, vpath: str = '',
          asslangs: dict = {}, FFmuxer: int = 0, forceSubTrack: str = '?', makeMKS: bool = False):
     """
 主函数，负责调用各函数走完完整的处理流程
@@ -2989,7 +3055,7 @@ def main(font_info: list, asspath: list, outdir: list = ['', '', ''], mux: bool 
         return newasspath, newfont_name, -1
 
 
-def templeFontLoad(_dir: str, font_info: list) -> list:
+def templeFontLoad(_dir: str, font_info: font_info_c) -> font_info_c:
     """临时字体载入"""
     global s_fontload
     font_list = []
@@ -3025,9 +3091,9 @@ def cls():
     os.system('cls')
 
 
-def cListAssFont(font_info):
+def cListAssFont(font_info: font_info_c):
     global resultw, s_subdir, copyfont, fontload, exact_lost, char_lost, embeddedFontExtract
-    font_name = font_info[0]
+    font_name = font_info.font_name
     leave = True
     while leave:
         fontlist = {}
@@ -3616,7 +3682,7 @@ def getSubsLangsV2(media_ass: dict) -> list:
     return sublangs
 
 
-def cFontSubset(font_info):
+def cFontSubset(font_info: font_info_c):
     global extlist, v_subdir, s_subdir, rmAssIn, rmAttach, fontload, \
         mkvout, assout, fontout, matchStrict, no_mkvm, notfont, warningStop, errorStop, ignoreLost, char_compatible, \
         insteadFF, noRequestFont, rudeSubN2L
@@ -3977,7 +4043,7 @@ language-list |  MIT License
     os.system('pause')
 
 
-def cFontSearch(font_info: list):
+def cFontSearch(font_info: font_info_c):
     leave = True
     while leave:
         cls()
@@ -3998,16 +4064,16 @@ def cFontSearch(font_info: list):
             if len(f_n) > 0:
                 hadget = False
                 if work == 2:
-                    f_nt = font_info[1].get(f_n)
+                    f_nt = font_info.getByIndex(1).get(f_n)
                     if f_nt is not None:
-                        f_nget = font_info[0].get(f_nt)
+                        f_nget = font_info.getByIndex(0).get(f_nt)
                         if f_nget is not None:
                             print('\033[1;31m[{0}]\033[0m {2}\033[1m\n\"{1}\"\033[0m\n'.format(f_nt, f_nget[0],
                                                                                                f_nget[2].get(preferEncoding, '')))
                             hadget = True
                 else:
-                    for k in font_info[0].keys():
-                        f_nget = font_info[0][k]
+                    for k in font_info.getByIndex(0).keys():
+                        f_nget = font_info.getByIndex(0)[k]
                         ksame = 0
                         for kand in f_n.split(' '):
                             if kand in k.lower():
@@ -4215,7 +4281,6 @@ no_mkvm = False
 no_cmdc = False
 mkvmv = ''
 ffmv = ''
-font_info = [{}, {}, {}, {}, {}]
 
 def checkFF():
     '''检查ffmpeg和ffprobe可用性'''
@@ -4224,8 +4289,6 @@ def checkFF():
         ffmv = '\n' + ' '.join(os.popen('ffmpeg -version', mode='r').readlines()[0].rstrip('\n').split(' ')[:3])
         insteadFF = True
 
-# font_info 列表结构
-#   [ font_name(dict), font_n_lower(dict), font_family(dict), warning_font(dict) ]
 def loadMain(reload: bool = False):
     global extlist, no_mkvm, no_cmdc, dupfont, mkvmv, font_info, fontin, langlist, ffmv, insteadFF
     # 初始化字体列表 和 mkvmerge 相关参数
@@ -4233,7 +4296,7 @@ def loadMain(reload: bool = False):
     if not reload:
         if not o_fontload:
             font_list = getFontFileList(fontin)
-            font_info = fontProgress(font_list, [{}, {}, {}, {}, {}], f_priority)
+            font_info = fontProgress(font_list, font_info_c(), f_priority)
             del font_list
         mkvmv = '\n\033[1;33m没有检测到 mkvmerge\033[0m'
 
@@ -4289,7 +4352,7 @@ def loadMain(reload: bool = False):
 其他:
 [R] 字体信息重载{6}
 [D] 依赖与许可证
-[L] 直接退出'''.format(mkvmv, len(dupfont.keys()), len(font_info[0].keys()), len(font_info[3]), fltip, ffmv, ffMessage))
+[L] 直接退出'''.format(mkvmv, len(dupfont.keys()), len(font_info.getByIndex(0).keys()), len(font_info.getByIndex(3)), fltip, ffmv, ffMessage))
     print('')
     work = os.system('choice /M 请选择: /C ABCSWDLRMU{}'.format(ffSelect))
     if work == 1:
@@ -4317,11 +4380,11 @@ def loadMain(reload: bool = False):
     elif work == 5:
         # cOutOfDateFontsTrans()
         cls()
-        if len(font_info[3]) > 0:
+        if len(font_info.getByIndex(3)) > 0:
             oldflist = {}
-            for s in font_info[3]:
-                oldfname = font_info[1].get(s)
-                oldfpath = font_info[0].get(oldfname)[0]
+            for s in font_info.getByIndex(3):
+                oldfname = font_info.getByIndex(1).get(s)
+                oldfpath = font_info.getByIndex(0).get(oldfname)[0]
                 if oldflist.get(oldfpath) is None:
                     oldflist[oldfpath] = [oldfname]
                 else:
