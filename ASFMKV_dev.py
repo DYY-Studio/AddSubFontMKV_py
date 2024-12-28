@@ -416,7 +416,7 @@ changeOnly: 是否只输出字体在行中发生变化的行（带有 \\fn \\r \
             continue
 
         # 粗体、斜体标签处理
-        splittext = []
+        splittext: list[list[str, str, str, str]] = []
         lfn = eventfont['Fontname']
         lfi = eventfont['Italic']
         lfb = eventfont['Bold']
@@ -431,7 +431,7 @@ changeOnly: 是否只输出字体在行中发生变化的行（带有 \\fn \\r \
                 st = allfind[sti]
                 ibopen = re.search(reIBon, st)
                 if ibopen is not None:
-                    stfind = eventftext2.find(st)
+                    stfind = lastfind + eventftext2.find(st)
                     addbold = lfb
                     additalic = lfi
                     # 不管有没有 \r 标签，先获取了再说
