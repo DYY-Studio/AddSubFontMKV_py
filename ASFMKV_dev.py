@@ -11,7 +11,7 @@ from typing import Optional
 from fontTools import ttLib, subset
 from chardet.universaldetector import UniversalDetector
 from chardet import detect
-import os, sys, re, winreg, zlib, json, copy, traceback, shutil, configparser, time, locale, codecs, argparse
+import os, sys, re, winreg, zlib, json, copy, traceback, shutil, configparser, time, locale, codecs, argparse, unicodedata
 from os import path
 from colorama import init
 from datetime import datetime
@@ -1135,13 +1135,12 @@ def fnReadCorrect(ttfont: ttLib.ttFont, index: int, fontpath: str):
     return namestr, c
 
 
-
 def outputSameLength(s: str) -> str:
     length = 0
     output = ''
     for i in range(len(s) - 1, -1, -1):
         si = s[i]
-        if 65281 <= ord(si) <= 65374 or ord(si) == 12288 or ord(si) not in range(33, 127):
+        if unicodedata.east_asian_width(si) in ['F', 'W', 'A']:
             length += 2
         else:
             length += 1
@@ -1150,7 +1149,8 @@ def outputSameLength(s: str) -> str:
             break
         else:
             output = si + output
-    return output + ''.join([' ' for _ in range(0, 60 - length)])
+    return output.ljust(60 - (length - len(output)), ' ')
+    # + ''.join([' ' for _ in range(0, 60 - length)])
 
 
 # 当前字体缓存版本，小于该版本的字体缓存会被删除重建
