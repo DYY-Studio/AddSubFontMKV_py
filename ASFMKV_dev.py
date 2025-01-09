@@ -2005,10 +2005,12 @@ def assFontSubset(assfont: dict, fontdir: str, allTTF: bool = False):
             if errorStop:
                 print('\033[1;31m[WARNING] 字体\"{0}\"子集化失败，强制终止批量处理\033[0m'.format(path.basename(s[0])))
                 return None
+
             print('\033[1;31m[WARNING] 字体\"{0}\"子集化失败，将会保留完整字体\033[0m'.format(path.basename(s[0])))
 
             ttLib.TTFont(s[0], lazy=False, fontNumber=int(s[1])).save(subfontpath, False)
             subfontcrc = None
+            crcnewf = subfontpath
 
             for si in s[5]:
                 for si3 in s[3].split("|"):
